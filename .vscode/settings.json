@@ -1,0 +1,7 @@
+{
+          "workbench.editor.autoLockGroups": {
+                    "workbench.editor.chatSession": true
+          },
+          "workbench.colorTheme": "Abyss",
+          "editor.mouseWheelZoom": false
+}

@@ -1,0 +1,228 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ndar-blue: #1260a1;
+  --ndar-blue-deep: #0a3760;
+  --ndar-blue-dark: #08233e;
+  --ndar-river: #79abc9;
+  --ndar-river-soft: #b9d8e7;
+  --ndar-sea-mist: #dff1f4;
+  --ndar-beige: #d8c1a0;
+  --ndar-beige-soft: #efe0ca;
+  --ndar-sand: #f7efe2;
+  --ndar-sand-strong: #ead7bc;
+  --ndar-gold: #d7ae49;
+  --ndar-green: #18c56e;
+  --ndar-cream: #fffaf2;
+  --ndar-text: #132b46;
+  --ndar-muted: #6d7f94;
+  --ndar-surface: rgba(255, 251, 245, 0.84);
+  --ndar-surface-strong: rgba(255, 253, 248, 0.96);
+  --ndar-line: rgba(13, 62, 104, 0.1);
+  --ndar-shadow: 0 28px 80px rgba(8, 35, 62, 0.16);
+  --ndar-shadow-soft: 0 16px 40px rgba(8, 35, 62, 0.1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background:
+    radial-gradient(circle at 12% 10%, rgba(223, 241, 244, 0.95), transparent 28%),
+    radial-gradient(circle at 82% 14%, rgba(121, 171, 201, 0.34), transparent 24%),
+    radial-gradient(circle at 50% 100%, rgba(239, 224, 202, 0.42), transparent 34%),
+    linear-gradient(180deg, #eef7f8 0%, #e1eff0 28%, #e7e7dd 62%, #efe2cf 100%);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ndar-text);
+  font-family: "Poppins", "Segoe UI", sans-serif;
+  background:
+    linear-gradient(rgba(253, 255, 255, 0.72), rgba(245, 246, 247, 0.82)),
+    radial-gradient(circle at 16% 12%, rgba(185, 216, 231, 0.3), transparent 24%),
+    radial-gradient(circle at 88% 10%, rgba(121, 171, 201, 0.18), transparent 22%),
+    radial-gradient(circle at 50% 120%, rgba(216, 193, 160, 0.2), transparent 36%),
+    linear-gradient(145deg, #eff8f8 0%, #e7f2f1 34%, #ece9de 64%, #f1e3cf 100%);
+  overflow-x: hidden;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    linear-gradient(120deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.08)),
+    radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.28), transparent 30%),
+    radial-gradient(circle at 72% 24%, rgba(223, 241, 244, 0.2), transparent 26%);
+  backdrop-filter: blur(8px);
+  z-index: -2;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(121, 171, 201, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(121, 171, 201, 0.045) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.3), transparent 74%);
+  z-index: -1;
+  pointer-events: none;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.ndar-shell {
+  width: min(100%, 1120px);
+  margin: 0 auto;
+}
+
+.ndar-card {
+  background:
+    linear-gradient(180deg, rgba(255, 253, 248, 0.96), rgba(252, 247, 240, 0.84)),
+    var(--ndar-surface);
+  border: 1px solid rgba(255, 255, 255, 0.66);
+  box-shadow: var(--ndar-shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.ndar-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.35), transparent 44%);
+  pointer-events: none;
+}
+
+.ndar-glass {
+  background: rgba(255, 251, 245, 0.72);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.52);
+  box-shadow: var(--ndar-shadow-soft);
+}
+
+.ndar-panel {
+  background:
+    linear-gradient(180deg, rgba(10, 51, 86, 0.98), rgba(5, 28, 51, 0.995));
+  color: #fff8ef;
+  box-shadow: 0 30px 80px rgba(8, 35, 62, 0.34);
+}
+
+.ndar-panel-beige {
+  background:
+    linear-gradient(180deg, rgba(245, 233, 214, 0.96), rgba(232, 213, 186, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  box-shadow: 0 24px 70px rgba(112, 79, 34, 0.12);
+}
+
+.ndar-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.65rem 0.95rem;
+  border-radius: 999px;
+  background: rgba(18, 96, 161, 0.08);
+  color: var(--ndar-blue);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.ndar-lift {
+  transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+}
+
+.ndar-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 22px 48px rgba(8, 35, 62, 0.14);
+}
+
+.ndar-hero-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
+
+.ndar-hero-chip {
+  background: rgba(255, 248, 239, 0.18);
+  color: #ffe0ab;
+  border: 1px solid rgba(255, 248, 239, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.ndar-hero-accent {
+  color: #f2c981;
+}
+
+.ndar-hero-copy {
+  color: #e8f1f8;
+}
+
+.ndar-hero-soft {
+  color: #d5e3f0;
+}
+
+.ndar-hero-glass {
+  background: rgba(7, 28, 49, 0.36);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.ndar-hero-button {
+  background: rgba(255, 248, 239, 0.16);
+  color: #fff8ef;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.ndar-route-badge {
+  background: rgba(255, 247, 235, 0.9);
+  border: 1px solid rgba(12, 59, 99, 0.08);
+  box-shadow: var(--ndar-shadow-soft);
+}
+
+.leaflet-container {
+  background: #cfe5f5 !important;
+  border-radius: 28px;
+}
+
+.leaflet-control-container {
+  display: none;
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: #fffaf2;
+  color: var(--ndar-text);
+}
+
+@media (max-width: 640px) {
+  .ndar-shell {
+    width: min(100%, 100%);
+  }
+}

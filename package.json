@@ -1,0 +1,10 @@
+{
+  "scripts": {
+    "start:frontend": "npm --prefix frontend start",
+    "start:backend": "npm --prefix backend start",
+    "build:frontend": "npm --prefix frontend run build"
+  },
+  "dependencies": {
+    "axios": "^1.13.6"
+  }
+}
