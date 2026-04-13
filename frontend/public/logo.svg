@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Yoonbi logo</title>
+  <desc id="desc">Logo minimaliste Yoonbi avec les initiales Y et B</desc>
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#165c96;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f1c778;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#grad)" />
+  <path d="M160 128h64l96 256h-64l-19.2-51.2H208L188.8 384H128L160 128zm112 128l-30.4-81.6L221.6 256h50.4z" fill="#fff" />
+  <text x="256" y="456" text-anchor="middle" fill="#ffffff" font-family="Sora, Arial, sans-serif" font-size="48" font-weight="800">Yoonbi</text>
+</svg>

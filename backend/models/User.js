@@ -5,10 +5,17 @@ const providerDetailsSchema = new mongoose.Schema(
     serviceCategory: String,
     experienceYears: String,
     serviceArea: String,
+    locationLabel: String,
+    coordinates: {
+      lat: Number,
+      lng: Number
+    },
     availability: String,
+    vehicleBrand: String,
     vehicleType: String,
     vehiclePlate: String,
     beautySpecialty: String,
+    otherServiceDetail: String,
     hasProfessionalTools: Boolean
   },
   { _id: false }
@@ -53,12 +60,88 @@ const UserSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ["pending", "needs_revision", "verified", "cancelled"],
+    enum: ["pending", "needs_revision", "verified", "cancelled", "suspended"],
     default: "pending"
   },
   reviewNote: {
     type: String,
     default: ""
+  },
+  safetyReportsCount: {
+    type: Number,
+    default: 0
+  },
+  safetySuspendedAt: {
+    type: Date,
+    default: null
+  },
+  safetySuspensionReason: {
+    type: String,
+    default: ""
+  },
+  safetyLastReportAt: {
+    type: Date,
+    default: null
+  },
+  // Rating and Reputation System
+  rating: {
+    type: Number,
+    default: 5.0,
+    min: 1.0,
+    max: 5.0
+  },
+  totalRatings: {
+    type: Number,
+    default: 0
+  },
+  ratingSum: {
+    type: Number,
+    default: 0
+  },
+  completedRides: {
+    type: Number,
+    default: 0
+  },
+  cancelledRides: {
+    type: Number,
+    default: 0
+  },
+  onTimeRate: {
+    type: Number,
+    default: 1.0,
+    min: 0,
+    max: 1
+  },
+  // Driver/Technician Stats
+  totalEarnings: {
+    type: Number,
+    default: 0
+  },
+  todayEarnings: {
+    type: Number,
+    default: 0
+  },
+  weeklyEarnings: {
+    type: Number,
+    default: 0
+  },
+  monthlyEarnings: {
+    type: Number,
+    default: 0
+  },
+  // Online Status
+  isOnline: {
+    type: Boolean,
+    default: false
+  },
+  lastSeen: {
+    type: Date,
+    default: Date.now
+  },
+  currentLocation: {
+    latitude: Number,
+    longitude: Number,
+    updatedAt: Date
   },
   providerDetails: { type: providerDetailsSchema, default: () => ({}) },
   documentChecks: {

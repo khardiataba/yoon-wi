@@ -37,6 +37,30 @@ const featureCards = [
     accent: "from-[#ef7f87] to-[#f5a16f]",
     badge: "Speed",
     action: "/service"
+  },
+  {
+    key: "automotive",
+    title: "Lavage Automobile",
+    subtitle: "Nettoyage voiture, moto et vehicules professionnels.",
+    accent: "from-[#1260a1] to-[#4a90e2]",
+    badge: "Clean",
+    action: "/service"
+  },
+  {
+    key: "maintenance",
+    title: "Maintenance & Reparations",
+    subtitle: "Reparations electriques, mecaniques et menageres.",
+    accent: "from-[#8b5cf6] to-[#a78bfa]",
+    badge: "Fix",
+    action: "/service"
+  },
+  {
+    key: "rental",
+    title: "Location de Vehicules",
+    subtitle: "Petit format (motos, scooters) et grand format (SUV, minibus).",
+    accent: "from-[#ec4899] to-[#f472b6]",
+    badge: "Drive",
+    action: "/rental"
   }
 ]
 
@@ -70,8 +94,8 @@ const discoveryCatalog = [
     coords: { lat: 16.042, lng: -16.5065 }
   },
   {
-    id: "taxi-ndar",
-    title: "Course rapide Ndar Express",
+    id: "taxi-yoonbi",
+    title: "Course rapide Yoonbi",
     description: "Depart immediat pour vos trajets urbains et depots urgents.",
     type: "mobility",
     category: "rides",
@@ -99,7 +123,7 @@ const discoveryCatalog = [
   },
   {
     id: "livreur-centre",
-    title: "Livreur Flash Ndar",
+    title: "Livreur Flash Yoonbi",
     description: "Livraison de colis, documents et courses urgentes avec prise en charge rapide.",
     type: "service",
     category: "livreur",
@@ -138,6 +162,104 @@ const discoveryCatalog = [
     accent: "bg-[#f6f0e6]",
     iconLabel: "WOOD",
     coords: { lat: 16.0068, lng: -16.5205 }
+  },
+  {
+    id: "lavage-auto-centre",
+    title: "Lavage Auto Express",
+    description: "Nettoyage exterieur/interieur, lavage moto et vehicules utilitaires.",
+    type: "service",
+    category: "lavage-automobile",
+    area: "Centre-ville",
+    eta: "25 min",
+    isOpen: true,
+    price: 8000,
+    accent: "bg-[#e0f2fe]",
+    iconLabel: "CAR",
+    coords: { lat: 16.0244, lng: -16.5015 }
+  },
+  {
+    id: "plomberie-gandon",
+    title: "Plomberie Gandon",
+    description: "Reparations fuite, installation WC, robinets et depannages urgents.",
+    type: "service",
+    category: "plomberie",
+    area: "Gandon",
+    eta: "35 min",
+    isOpen: true,
+    price: 10000,
+    accent: "bg-[#dbeafe]",
+    iconLabel: "PIPE",
+    coords: { lat: 16.018, lng: -16.3728 }
+  },
+  {
+    id: "jardinage-ndioloffene",
+    title: "Jardinage Ndioloffene",
+    description: "Tonte pelouse, taille haies, nettoyage jardin et petits travaux verts.",
+    type: "service",
+    category: "jardinage",
+    area: "Ndioloffene",
+    eta: "50 min",
+    isOpen: false,
+    price: 12000,
+    accent: "bg-[#dcfce7]",
+    iconLabel: "GARD",
+    coords: { lat: 16.0312, lng: -16.5078 }
+  },
+  {
+    id: "informatique-universite",
+    title: "Tech Support Universite",
+    description: "Reparation ordinateur, installation logiciels et depannage reseau.",
+    type: "service",
+    category: "informatique",
+    area: "Universite / Sanar",
+    eta: "40 min",
+    isOpen: true,
+    price: 6000,
+    accent: "bg-[#f3e8ff]",
+    iconLabel: "TECH",
+    coords: { lat: 16.0567, lng: -16.4568 }
+  },
+  {
+    id: "cours-particuliers",
+    title: "Cours Particuliers",
+    description: "Soutien scolaire, cours langues et preparation examens.",
+    type: "service",
+    category: "cours-soutien",
+    area: "Centre-ville",
+    eta: "60 min",
+    isOpen: true,
+    price: 15000,
+    accent: "bg-[#fef3c7]",
+    iconLabel: "EDU",
+    coords: { lat: 16.0244, lng: -16.5015 }
+  },
+  {
+    id: "menage-domicile",
+    title: "Menage a Domicile",
+    description: "Nettoyage maison, bureaux et espaces professionnels.",
+    type: "service",
+    category: "menage",
+    area: "Toute la ville",
+    eta: "90 min",
+    isOpen: true,
+    price: 20000,
+    accent: "bg-[#fce7f3]",
+    iconLabel: "CLEAN",
+    coords: { lat: 16.0244, lng: -16.5015 }
+  },
+  {
+    id: "baby-sitting",
+    title: "Baby Sitting & Garde",
+    description: "Garde d'enfants, activites educatives et surveillance scolaire.",
+    type: "service",
+    category: "baby-sitting",
+    area: "Centre-ville",
+    eta: "120 min",
+    isOpen: false,
+    price: 25000,
+    accent: "bg-[#fdf2f8]",
+    iconLabel: "BABY",
+    coords: { lat: 16.0244, lng: -16.5015 }
   }
 ]
 
@@ -146,7 +268,11 @@ const serviceFamilies = [
   { key: "artisan", title: "Artisan Services", subtitle: "Depannage maison", color: "bg-[#d7ae49]", iconLabel: "AR", iconSymbol: "🧰", route: "/service" },
   { key: "food", title: "Restaurants & Cafes", subtitle: "Repas et gateaux", color: "bg-[#18c56e]", iconLabel: "FO", iconSymbol: "🍽️", route: "/service" },
   { key: "beauty", title: "Coiffure & Beaute", subtitle: "Salon, maquillage, soins", color: "bg-[#ef7f87]", iconLabel: "BE", iconSymbol: "💇", route: "/service" },
-  { key: "delivery", title: "Livreur", subtitle: "Colis et courses urgentes", color: "bg-[#5a86d6]", iconLabel: "DL", iconSymbol: "🛵", route: "/service" }
+  { key: "delivery", title: "Livreur", subtitle: "Colis et courses urgentes", color: "bg-[#5a86d6]", iconLabel: "DL", iconSymbol: "🛵", route: "/service" },
+  { key: "automotive", title: "Lavage Auto", subtitle: "Nettoyage vehicules", color: "bg-[#1260a1]", iconLabel: "CA", iconSymbol: "🚗", route: "/service" },
+  { key: "maintenance", title: "Maintenance", subtitle: "Reparations diverses", color: "bg-[#8b5cf6]", iconLabel: "MA", iconSymbol: "🔧", route: "/service" },
+  { key: "education", title: "Education", subtitle: "Cours et soutien", color: "bg-[#f59e0b]", iconLabel: "ED", iconSymbol: "📚", route: "/service" },
+  { key: "domestic", title: "Services Domestiques", subtitle: "Menage et garde", color: "bg-[#ec4899]", iconLabel: "DO", iconSymbol: "🏠", route: "/service" }
 ]
 
 const quickFilters = ["Ouvert maintenant", "Livraison", "Trajet rapide", "Artisan", "Beaute", "Livreur"]
@@ -360,14 +486,14 @@ const Home = () => {
               <div className="mb-2 flex items-center gap-3">
                 <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-white bg-white shadow-lg shadow-black/20">
                   <img
-                    src="/logo.png"
-                    alt="Ndar Express"
+                    src="/logo.svg"
+                    alt="Yoonbi"
                     className="h-10 w-10 rounded-full object-cover"
                     onError={(e) => { e.target.src = '/logo512.png'; }}
                   />
                 </div>
                 <div className="font-['Sora'] text-[34px] font-extrabold leading-none text-white">
-                  Ndar<span className="text-[#f1c778]">Express</span>
+                  Yoonbi
                 </div>
               </div>
               <div className="mt-1 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-2 text-sm font-semibold text-[#f3f8fc]">
@@ -482,7 +608,7 @@ const Home = () => {
           <div className={`min-h-[240px] rounded-[32px] bg-gradient-to-br ${featureCards[activeSlide].accent} p-6 text-white shadow-[0_28px_70px_rgba(8,35,62,0.22)] transition-all duration-500`}>
             <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-white/70">Modern style, Ndar spirit</p>
+                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-white/70">Modern style, esprit Yoonbi</p>
                 <h1 className="mt-3 max-w-[220px] font-['Sora'] text-3xl font-extrabold leading-tight">{featureCards[activeSlide].title}</h1>
                 <p className="mt-3 max-w-[250px] text-sm text-white/85">{featureCards[activeSlide].subtitle}</p>
               </div>

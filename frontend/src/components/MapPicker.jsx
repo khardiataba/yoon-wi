@@ -71,7 +71,8 @@ const MapPicker = ({
   driverPosition,
   routeGeometry,
   readOnly = false,
-  selectionMode = "pickup"
+  selectionMode = "pickup",
+  extraMarkers = []
 }) => {
   const markers = useMemo(
     () => ({
@@ -113,6 +114,16 @@ const MapPicker = ({
         {markers.pickup && <Marker position={[markers.pickup.lat, markers.pickup.lng]} icon={pickupIcon} />}
         {markers.destination && <Marker position={[markers.destination.lat, markers.destination.lng]} icon={destinationIcon} />}
 
+        {Array.isArray(extraMarkers) &&
+          extraMarkers.map((marker) => (
+            <Marker
+              key={marker.id || `${marker.lat}-${marker.lng}`}
+              position={[marker.lat, marker.lng]}
+              icon={createEmojiIcon(marker.emoji || "•", marker.background || "#165c96")}
+              title={marker.label || marker.name || "Prestataire"}
+            />
+          ))}
+
         <LocationMarker
           disabled={readOnly}
           onSelect={(location) => {
@@ -126,7 +137,7 @@ const MapPicker = ({
       </MapContainer>
 
       <div className="absolute bottom-3 right-4 z-[1001] rounded-full bg-white/82 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#165c96] backdrop-blur">
-        Ndar Express Maps
+        Yoonbi Maps
       </div>
     </div>
   )

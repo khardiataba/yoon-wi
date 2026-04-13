@@ -1,11 +1,15 @@
 const express = require("express")
 const User = require("../models/User")
+const ServiceRequest = require("../models/ServiceRequest")
 const { authMiddleware, requireRole } = require("../middleware/auth")
 
 const router = express.Router()
 
 const getRequiredDocuments = (user) => {
-  if (user.role === "driver") {
+  const serviceCategory = String(user?.providerDetails?.serviceCategory || "").trim()
+  const requiresDriverDocuments = user.role === "driver" || ["Coursier", "Livraison / Coursier"].includes(serviceCategory)
+
+  if (requiresDriverDocuments) {
     return ["profilePhoto", "idCardFront", "idCardBack", "license", "registrationCard"]
   }
 
@@ -181,6 +185,28 @@ router.patch(
       await user.save()
 
       return res.json({ message: "Inscription annulee." })
+    } catch (err) {
+      console.error(err)
+      return res.status(500).json({ message: "Erreur serveur" })
+    }
+  }
+)
+
+router.get(
+  "/services/contributions",
+  authMiddleware,
+  requireRole("admin"),
+  async (req, res) => {
+    try {
+      const { status } = req.query
+      const filter = {}
+
+      if (status && ["due", "paid", "refunded"].includes(status)) {
+        filter.platformContributionStatus = status
+      }
+
+      const serviceContributions = await ServiceRequest.find(filter).sort({ createdAt: -1 })
+      return res.json(serviceContributions)
     } catch (err) {
       console.error(err)
       return res.status(500).json({ message: "Erreur serveur" })

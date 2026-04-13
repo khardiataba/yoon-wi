@@ -23,7 +23,8 @@ const authMiddleware = async (req, res, next) => {
 const requireRole = (role) => {
   return (req, res, next) => {
     if (!req.user) return res.status(401).json({ message: "Non authentifié" })
-    if (req.user.role !== role) {
+    const allowedRoles = Array.isArray(role) ? role : [role]
+    if (!allowedRoles.includes(req.user.role)) {
       return res.status(403).json({ message: "Accès refusé" })
     }
     next()
@@ -32,6 +33,9 @@ const requireRole = (role) => {
 
 const requireVerified = (req, res, next) => {
   if (!req.user) return res.status(401).json({ message: "Non authentifié" })
+  if (req.user.status === "suspended") {
+    return res.status(403).json({ message: "Compte suspendu pour raison de sécurité" })
+  }
   if (req.user.status !== "verified") {
     return res.status(403).json({ message: "Compte non validé" })
   }

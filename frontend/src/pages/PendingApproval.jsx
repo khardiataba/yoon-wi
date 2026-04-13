@@ -23,6 +23,29 @@ const getRequiredDocuments = (user) => {
   return []
 }
 
+const getStatusTitle = (status) => {
+  if (status === "suspended") return "Compte suspendu pour raison de sécurité"
+  if (status === "cancelled") return "Inscription annulée"
+  if (status === "needs_revision") return "Documents à corriger"
+  return "Validation admin en cours"
+}
+
+const getStatusDescription = (user) => {
+  if (user?.status === "suspended") {
+    return user?.safetySuspensionReason || user?.reviewNote || "Votre compte a été suspendu après plusieurs signalements de sécurité. Contactez le support pour faire le point."
+  }
+
+  if (user?.status === "cancelled") {
+    return user?.reviewNote || "Votre inscription a été annulée. Merci de contacter le support si vous pensez qu'il y a une erreur."
+  }
+
+  if (user?.status === "needs_revision") {
+    return user?.reviewNote || "Certains documents doivent être corrigés avant validation."
+  }
+
+  return "Vos documents sont d'abord analysés automatiquement. Si le dossier est complet, le compte peut être activé."
+}
+
 const PendingApproval = () => {
   const navigate = useNavigate()
   const { user, logout, fetchProfile } = useAuth()
@@ -79,13 +102,22 @@ const PendingApproval = () => {
   return (
     <div className="min-h-screen px-4 py-8">
       <div className="ndar-shell space-y-4">
+        <button
+          onClick={() => {
+            logout()
+            navigate("/login", { replace: true })
+          }}
+          className="mb-3 inline-flex items-center gap-2 rounded-2xl bg-white/10 px-4 py-2 text-sm font-semibold text-[#1260a1] transition-all hover:bg-white/20"
+        >
+          ⬅️ Deconnexion
+        </button>
         <header className="rounded-[38px] border border-[#d9e8f4] bg-[linear-gradient(180deg,#eef6fc_0%,#deedf8_100%)] p-6 shadow-[0_18px_42px_rgba(18,96,161,0.10)]">
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="ndar-chip bg-[#dbeaf7] text-[#1260a1]">Verification dossier</div>
-              <div className="mt-4 font-['Sora'] text-3xl font-extrabold text-[#1260a1]">Validation admin en cours</div>
+              <div className="mt-4 font-['Sora'] text-3xl font-extrabold text-[#1260a1]">{getStatusTitle(user?.status)}</div>
               <p className="mt-3 text-sm text-[#1260a1]">
-                Bonjour {user?.name || "partenaire"}, vos documents sont d'abord analyses automatiquement. Si le dossier est complet et reconnu, le compte peut etre active automatiquement. Sinon il reste en attente ou repart en correction.
+                Bonjour {user?.name || "partenaire"}, {getStatusDescription(user)}
               </p>
               {user?.reviewNote && (
                 <div className="mt-4 rounded-[24px] border border-[#d5e5f2] bg-white/85 px-4 py-4 text-sm text-[#1260a1] backdrop-blur-xl">
@@ -161,6 +193,24 @@ const PendingApproval = () => {
             <p>3. Si une piece n'est pas reconnue ou parait incorrecte, vous devez la reprendre plus nettement.</p>
           </div>
         </section>
+
+        {user?.status === "suspended" && (
+          <section className="ndar-card rounded-[38px] border border-[#f0b0b0] bg-[#fff5f5] p-6">
+            <div className="font-['Sora'] text-xl font-bold text-[#a54b55]">Besoin d'aide sécurité ?</div>
+            <p className="mt-2 text-sm text-[#a54b55]">
+              Votre compte est temporairement suspendu pour sécurité. Le support peut examiner le dossier et vous indiquer la marche à suivre.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => navigate("/security-support")}
+                className="rounded-[26px] bg-[linear-gradient(135deg,#1260a1_0%,#0a3760_100%)] px-5 py-4 text-sm font-bold uppercase tracking-[0.2em] text-white shadow-[0_22px_42px_rgba(8,35,62,0.22)]"
+              >
+                Ouvrir support sécurité
+              </button>
+            </div>
+          </section>
+        )}
 
         {user?.status === "needs_revision" && (
           <section className="ndar-card rounded-[38px] p-6">

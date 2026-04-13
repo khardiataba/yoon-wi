@@ -10,6 +10,32 @@ const locationSchema = new mongoose.Schema(
   { _id: false }
 )
 
+const safetyReportSchema = new mongoose.Schema(
+  {
+    type: {
+      type: String,
+      default: "incident"
+    },
+    message: {
+      type: String,
+      default: ""
+    },
+    createdByRole: {
+      type: String,
+      default: "client"
+    },
+    location: {
+      type: locationSchema,
+      default: () => ({})
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  },
+  { _id: false }
+)
+
 const rideSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   driverId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
@@ -24,10 +50,13 @@ const rideSchema = new mongoose.Schema({
   appCommissionPercent: { type: Number, default: 12 },
   appCommissionAmount: { type: Number, default: 0 },
   providerNetAmount: { type: Number, default: 0 },
-  vehicleType: { type: String, default: "Ndar Express Classic" },
+  vehicleType: { type: String, default: "YOONBI Classic" },
   paymentMethod: { type: String, enum: ["Cash", "Wave", "OM", "Card"], default: "Cash" },
   distanceKm: { type: Number, default: null },
   durationMin: { type: Number, default: null },
+  safetyCode: { type: String, default: null, select: false },
+  safetyCodeVerifiedAt: { type: Date, default: null },
+  safetyReports: { type: [safetyReportSchema], default: [] },
   createdAt: { type: Date, default: Date.now }
 })
 

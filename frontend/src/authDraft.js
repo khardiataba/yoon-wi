@@ -1,4 +1,4 @@
-export const AUTH_DRAFT_KEY = "ndar_express_auth_draft"
+export const AUTH_DRAFT_KEY = "yoonbi_auth_draft"
 
 export const readAuthDraft = () => {
   try {

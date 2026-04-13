@@ -1,5 +1,7 @@
 {
-          "recommendations": [
-                    "fhgffy.antigravity-auto-accept"
-          ]
+    "recommendations": [
+        "codeium.codeium-enterprise-updater",
+        "google.geminicodeassist",
+        "punal100.antigravity-copilot"
+    ]
 }

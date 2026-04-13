@@ -77,6 +77,9 @@ const documentLabels = {
 
 const isValidPhone = (value) => /^(?:\+221|00221)?\s?(7[05678])\s?\d{3}\s?\d{2}\s?\d{2}$/.test(value.trim())
 const isValidPlate = (value) => /^[A-Z]{1,3}-\d{2,4}-[A-Z]{1,3}$/.test(value.trim().toUpperCase())
+const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
+const isValidName = (value) => value.trim().length >= 2 && /^[a-zA-ZÀ-ÿ\s'-]+$/.test(value.trim())
+const isValidPassword = (value) => /^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(value)
 
 const Signup = () => {
   const navigate = useNavigate()
@@ -169,11 +172,24 @@ const Signup = () => {
   const validateStepOne = () => {
     const nextErrors = {}
 
+    // Validation des noms
+    if (!draft?.firstName?.trim()) nextErrors.firstName = "Le prenom est obligatoire."
+    else if (!isValidName(draft.firstName)) nextErrors.firstName = "Le prenom doit contenir uniquement des lettres."
+
+    if (!draft?.lastName?.trim()) nextErrors.lastName = "Le nom est obligatoire."
+    else if (!isValidName(draft.lastName)) nextErrors.lastName = "Le nom doit contenir uniquement des lettres."
+
+    // Validation email
     if (!email.trim()) nextErrors.email = "L'email est obligatoire."
+    else if (!isValidEmail(email)) nextErrors.email = "L'email n'est pas valide."
+
+    // Validation mot de passe
     if (!password.trim()) nextErrors.password = "Le mot de passe est obligatoire."
-    if (password.trim() && password.trim().length < 6) nextErrors.password = "Le mot de passe doit contenir au moins 6 caracteres."
+    else if (!isValidPassword(password)) nextErrors.password = "Le mot de passe doit contenir au moins 8 caracteres avec une lettre et un chiffre."
+
+    // Validation téléphone
     if (!phone.trim()) nextErrors.phone = "Le numero de telephone est obligatoire."
-    if (phone.trim() && !isValidPhone(phone)) nextErrors.phone = "Utilisez un numero senegalais valide, par ex. +221 77 123 45 67."
+    else if (!isValidPhone(phone)) nextErrors.phone = "Utilisez un numero senegalais valide, par ex. +221 77 123 45 67."
 
     if (mappedRole === "technician") {
       if (!providerDetails.serviceCategory) nextErrors.serviceCategory = "Choisissez votre domaine principal."
@@ -298,7 +314,7 @@ const Signup = () => {
             Onboarding partenaire
           </div>
           <div className="mt-4 font-['Sora'] text-[40px] font-extrabold text-white">
-            Ndar<span className="ndar-hero-accent">Express</span>
+            Yoonbi
           </div>
           <p className="ndar-hero-copy mt-3 text-sm">
             Parcours d'inscription pour {draft.firstName} {draft.lastName} ({roleLabel}).

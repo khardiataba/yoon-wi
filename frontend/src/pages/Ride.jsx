@@ -16,7 +16,7 @@ const normalizePlace = (result) => ({
 const searchPlaces = async (query) => {
   try {
     const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&countrycodes=sn&viewbox=${SAINT_LOUIS_VIEWBOX}&bounded=1&q=${encodeURIComponent(query)}`
-    const response = await fetch(url, { headers: { "User-Agent": "ndar-express" } })
+    const response = await fetch(url, { headers: { "User-Agent": "yoonbi" } })
     if (!response.ok) throw new Error("Recherche indisponible")
     const results = await response.json()
     return results.map(normalizePlace)
@@ -29,7 +29,7 @@ const searchPlaces = async (query) => {
 const reverseGeocode = async ({ lat, lng }) => {
   try {
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
-    const response = await fetch(url, { headers: { "User-Agent": "ndar-express" } })
+    const response = await fetch(url, { headers: { "User-Agent": "yoonbi" } })
     if (!response.ok) throw new Error("Adresse indisponible")
     const result = await response.json()
     return {
@@ -70,7 +70,7 @@ const Ride = () => {
   const [appCommissionPercent, setAppCommissionPercent] = useState(12)
   const [appCommissionAmount, setAppCommissionAmount] = useState(0)
   const [driverNetAmount, setDriverNetAmount] = useState(0)
-  const [vehicleType, setVehicleType] = useState("Ndar Express Classic")
+  const [vehicleType, setVehicleType] = useState("Yoonbi Classic")
   const [paymentMethod, setPaymentMethod] = useState("Cash")
   const [submitting, setSubmitting] = useState(false)
   const [loadingEstimate, setLoadingEstimate] = useState(false)
@@ -226,13 +226,13 @@ const Ride = () => {
         routeGeometry
       }
 
-      try {
-        localStorage.setItem("currentRide", JSON.stringify(rideData))
-      } catch (storageError) {
-        console.error("Impossible de sauvegarder la course localement:", storageError)
+      const createdRide = await api.post("/rides", rideData)
+      const storedRide = {
+        ...rideData,
+        ...createdRide.data,
+        rideId: createdRide.data?._id || createdRide.data?.id || null
       }
-
-      await api.post("/rides", rideData)
+      localStorage.setItem("currentRide", JSON.stringify(storedRide))
       navigate("/tracking")
     } catch (submitError) {
       console.error("Erreur pendant la reservation:", submitError)
@@ -257,10 +257,16 @@ const Ride = () => {
           />
 
           <div className="absolute inset-x-4 top-4 z-[1002] space-y-3">
+            <button
+              onClick={() => navigate(-1)}
+              className="rounded-2xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-white/20"
+            >
+              ⬅️ Retour
+            </button>
             <div className="ndar-hero-glass rounded-[30px] px-4 py-4 shadow-[0_20px_40px_rgba(8,35,62,0.18)] backdrop-blur-xl">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <div className="font-['Sora'] text-2xl font-extrabold text-white">Ndar Express</div>
+                  <div className="font-['Sora'] text-2xl font-extrabold text-white">Yoonbi</div>
                   <div className="ndar-hero-soft text-xs font-semibold uppercase tracking-[0.18em]">Trajet premium en temps reel</div>
                 </div>
                 <button onClick={() => navigate("/mybookings")} className="ndar-hero-button rounded-full px-3 py-2 text-xs font-bold">Mes courses</button>
@@ -348,6 +354,13 @@ const Ride = () => {
               </div>
             </div>
 
+            <div className="rounded-[24px] border border-[#dfeaf3] bg-[#f8fbfe] px-4 py-4 text-sm text-[#16324f]">
+              <div className="font-semibold text-[#165c96]">Sécurité intégrée</div>
+              <div className="mt-2 text-[#5f7894]">
+                Un code PIN sera généré pour cette course. Il devra être partagé au chauffeur au moment de la prise en charge.
+              </div>
+            </div>
+
             <div className="rounded-[24px] bg-white p-4 shadow-[0_12px_26px_rgba(8,35,62,0.08)]">
               <div className="font-semibold text-[#16324f]">Mode de paiement</div>
               <div className="mt-3 space-y-2">
@@ -377,8 +390,8 @@ const Ride = () => {
 
             <div className="space-y-3">
               {[
-                { label: "Ndar Express Go", subtitle: "Trajet standard, prix malin", emoji: "🚕", priceValue: price },
-                { label: "Ndar Express Confort", subtitle: "Plus d'espace et plus de confort", emoji: "🚘", priceValue: price + 2000 }
+                { label: "Yoonbi Go", subtitle: "Trajet standard, prix malin", emoji: "🚕", priceValue: price },
+                { label: "Yoonbi Confort", subtitle: "Plus d'espace et plus de confort", emoji: "🚘", priceValue: price + 2000 }
               ].map((option) => (
                 <button
                   key={option.label}

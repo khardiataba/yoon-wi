@@ -55,7 +55,7 @@ const Welcome = () => {
             Mobilite + services a Saint-Louis
           </div>
           <div className="mt-4 font-['Sora'] text-[42px] font-extrabold text-white">
-            Ndar<span className="text-[#f1c778]">Express</span>
+            Yoonbi
           </div>
           <p className="mt-3 text-sm text-[#eaf3fb]">
             Une experience plus rapide, plus claire et plus elegante pour bouger, commander et proposer vos services.

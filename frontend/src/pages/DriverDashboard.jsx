@@ -24,6 +24,11 @@ const DriverDashboard = () => {
   const [myRides, setMyRides] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [pinInputs, setPinInputs] = useState({})
+  const [actionMessage, setActionMessage] = useState(null)
+  const [actionError, setActionError] = useState(null)
+  const [busyRideId, setBusyRideId] = useState(null)
+  const [sosBusyRideId, setSosBusyRideId] = useState(null)
 
   const fetchRides = async () => {
     try {
@@ -41,10 +46,59 @@ const DriverDashboard = () => {
 
   const acceptRide = async (id) => {
     try {
+      setActionError(null)
+      setActionMessage(null)
       await api.patch(`/rides/${id}/accept`)
       fetchRides()
     } catch (err) {
       setError(err.response?.data?.message || "Impossible d'accepter")
+    }
+  }
+
+  const startRide = async (id) => {
+    const safetyCode = String(pinInputs[id] || "").trim()
+    if (!safetyCode) {
+      setActionError("Veuillez saisir le code PIN de départ.")
+      return
+    }
+
+    try {
+      setBusyRideId(id)
+      setActionError(null)
+      setActionMessage(null)
+      await api.patch(`/rides/${id}/start`, { safetyCode })
+      setActionMessage("Course démarrée avec succès.")
+      setPinInputs((current) => ({
+        ...current,
+        [id]: ""
+      }))
+      fetchRides()
+    } catch (err) {
+      setActionError(err.response?.data?.message || "Impossible de démarrer la course")
+    } finally {
+      setBusyRideId(null)
+    }
+  }
+
+  const sendRideSOS = async (id) => {
+    try {
+      setSosBusyRideId(id)
+      setActionError(null)
+      setActionMessage(null)
+      await api.post(`/rides/${id}/safety-report`, {
+        type: "sos",
+        message: "SOS chauffeur envoye depuis le tableau de bord",
+        location: {
+          name: "Course chauffeur",
+          address: "Support securite"
+        }
+      })
+      setActionMessage("SOS transmis au support sécurité.")
+      fetchRides()
+    } catch (err) {
+      setActionError(err.response?.data?.message || "Impossible d'envoyer le SOS")
+    } finally {
+      setSosBusyRideId(null)
     }
   }
 
@@ -101,10 +155,16 @@ const DriverDashboard = () => {
               <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8b6d2f]">Accueil</div>
               <div className="mt-2 font-['Sora'] text-lg font-bold">Explorer l'app</div>
             </button>
+            <button onClick={() => navigate("/security-support")} className="rounded-[22px] bg-[linear-gradient(180deg,#fff1f1_0%,#fbe6e6_100%)] px-4 py-4 text-left text-[#a54b55]">
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#c45860]">Urgence</div>
+              <div className="mt-2 font-['Sora'] text-lg font-bold">Support sécurité</div>
+            </button>
           </div>
         </header>
 
         {error && <div className="ndar-card rounded-[24px] bg-[#fff1f1] px-4 py-3 text-sm text-[#a54b55]">{error}</div>}
+        {actionError && <div className="ndar-card rounded-[24px] bg-[#fff1f1] px-4 py-3 text-sm text-[#a54b55]">{actionError}</div>}
+        {actionMessage && <div className="ndar-card rounded-[24px] bg-[#eefaf2] px-4 py-3 text-sm text-[#178b55]">{actionMessage}</div>}
 
         {loading ? (
           <div className="space-y-3">
@@ -205,6 +265,60 @@ const DriverDashboard = () => {
                         </div>
                         <span className="rounded-full bg-[#eefaf2] px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-[#178b55]">{ride.status}</span>
                       </div>
+
+                      {ride.status === "accepted" && (
+                        <div className="mt-4 rounded-[20px] bg-[linear-gradient(180deg,#f8fbff_0%,#edf5fb_100%)] p-4">
+                          <div className="text-sm font-semibold text-[#16324f]">Démarrer avec le code PIN du client</div>
+                          <div className="mt-2 flex flex-col gap-3 sm:flex-row">
+                            <input
+                              value={pinInputs[ride._id] || ""}
+                              onChange={(event) =>
+                                setPinInputs((current) => ({
+                                  ...current,
+                                  [ride._id]: event.target.value
+                                }))
+                              }
+                              inputMode="numeric"
+                              placeholder="Entrer le PIN"
+                              className="w-full rounded-2xl border border-[#d7e4ef] bg-white px-4 py-3 text-sm outline-none focus:border-[#1260a1]"
+                            />
+                            <button
+                              onClick={() => startRide(ride._id)}
+                              disabled={busyRideId === ride._id}
+                              className="rounded-2xl bg-[linear-gradient(135deg,#1260a1_0%,#0a3760_100%)] px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                              {busyRideId === ride._id ? "Vérification..." : "Démarrer"}
+                            </button>
+                          </div>
+                          <p className="mt-2 text-xs text-[#70839a]">
+                            La course ne peut commencer que si le PIN transmis par le client est correct.
+                          </p>
+                        </div>
+                      )}
+
+                      {ride.status === "ongoing" && (
+                        <div className="mt-4 rounded-[20px] bg-[linear-gradient(180deg,#eefaf2_0%,#e3f5ea_100%)] px-4 py-3 text-sm font-semibold text-[#178b55]">
+                          Course en cours. Gardez le trajet dans l'onglet suivi si besoin.
+                        </div>
+                      )}
+
+                      {(ride.status === "accepted" || ride.status === "ongoing") && (
+                        <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+                          <button
+                            onClick={() => sendRideSOS(ride._id)}
+                            disabled={sosBusyRideId === ride._id}
+                            className="rounded-2xl bg-[#fff1f1] px-4 py-3 text-sm font-bold text-[#a54b55] disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            {sosBusyRideId === ride._id ? "Envoi SOS..." : "SOS chauffeur"}
+                          </button>
+                          <button
+                            onClick={() => navigate("/security-support")}
+                            className="rounded-2xl bg-white px-4 py-3 text-sm font-bold text-[#1260a1]"
+                          >
+                            Ouvrir support sécurité
+                          </button>
+                        </div>
+                      )}
                     </article>
                   ))}
                 </div>

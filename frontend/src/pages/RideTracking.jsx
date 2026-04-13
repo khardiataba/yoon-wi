@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import api from "../api"
 import MapPicker from "../components/MapPicker"
 
 const trackingSteps = [
@@ -14,7 +15,10 @@ const RideTracking = () => {
   const [driverPosition, setDriverPosition] = useState({ lat: 16.026, lng: -16.503 })
   const [ride, setRide] = useState(null)
   const [error, setError] = useState(null)
+  const [statusMessage, setStatusMessage] = useState("")
+  const [sendingAlert, setSendingAlert] = useState(false)
   const [trackingStage, setTrackingStage] = useState(1)
+  const [syncedRideId, setSyncedRideId] = useState(null)
 
   useEffect(() => {
     try {
@@ -27,6 +31,38 @@ const RideTracking = () => {
       setError("Impossible de relire les details de votre course.")
     }
   }, [])
+
+  useEffect(() => {
+    const rideId = ride?._id || ride?.rideId || ride?.id
+    if (!rideId || rideId === syncedRideId) return
+
+    let cancelled = false
+
+    const refreshRide = async () => {
+      try {
+        const response = await api.get(`/rides/${rideId}`)
+        if (cancelled) return
+        const mergedRide = {
+          ...ride,
+          ...response.data,
+          rideId
+        }
+        setRide(mergedRide)
+        setSyncedRideId(rideId)
+        localStorage.setItem("currentRide", JSON.stringify(mergedRide))
+      } catch (refreshError) {
+        if (!cancelled) {
+          console.error("Impossible de recharger la course:", refreshError)
+        }
+      }
+    }
+
+    refreshRide()
+
+    return () => {
+      cancelled = true
+    }
+  }, [ride, syncedRideId])
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -50,6 +86,66 @@ const RideTracking = () => {
   const eta = ride?.durationMin ? `Arrivee estimee dans ${Math.max(1, ride.durationMin - 2)} min` : "Arrivee estimee dans 4 min"
   const currentStep = trackingSteps[trackingStage]
   const ridePrice = ride?.price ? `${ride.price.toLocaleString()} FCFA` : "Tarif calcule"
+  const safetyCode = ride?.safetyCode ? String(ride.safetyCode) : "----"
+  const rideIdentifier = ride?._id || ride?.rideId || ride?.id || null
+
+  const copySafetyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(safetyCode)
+      setStatusMessage("Code PIN copié.")
+    } catch (copyError) {
+      console.error("Impossible de copier le code:", copyError)
+      setStatusMessage("Copie impossible pour le moment.")
+    }
+  }
+
+  const shareTrip = async () => {
+    const summary = `Ma course Yoonbi
+Départ: ${ride?.pickup?.name || ride?.pickup?.address || "Position actuelle"}
+Destination: ${ride?.destination?.name || ride?.destination?.address || "Destination"}
+Code PIN: ${safetyCode}`
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "Course Yoonbi",
+          text: summary
+        })
+      } else {
+        await navigator.clipboard.writeText(summary)
+        setStatusMessage("Détails de la course copiés.")
+      }
+    } catch (shareError) {
+      console.error("Impossible de partager la course:", shareError)
+      setStatusMessage("Partage indisponible pour le moment.")
+    }
+  }
+
+  const sendEmergencyAlert = async () => {
+    if (!rideIdentifier) {
+      setStatusMessage("Aucune course active à signaler.")
+      return
+    }
+
+    try {
+      setSendingAlert(true)
+      setStatusMessage("")
+      await api.post(`/rides/${rideIdentifier}/safety-report`, {
+        type: "sos",
+        message: "Alerte de securite depuis le suivi de course",
+        location: {
+          name: ride?.pickup?.name || "Course active",
+          address: ride?.pickup?.address || ride?.destination?.address || ""
+        }
+      })
+      setStatusMessage("Alerte envoyée au support.")
+    } catch (alertError) {
+      console.error("Erreur pendant l'alerte de securite:", alertError)
+      setStatusMessage("Impossible d'envoyer l'alerte pour le moment.")
+    } finally {
+      setSendingAlert(false)
+    }
+  }
 
   return (
     <div className="min-h-screen px-4 pb-10 pt-5">
@@ -72,6 +168,56 @@ const RideTracking = () => {
             ))}
           </div>
         </header>
+
+        <section className="ndar-card rounded-[32px] p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="ndar-chip">Sécurité</div>
+              <h2 className="mt-3 font-['Sora'] text-xl font-bold text-[#16324f]">Code PIN de départ</h2>
+              <p className="mt-1 text-sm text-[#70839a]">
+                Montrez ce code au chauffeur avant le démarrage de la course.
+              </p>
+            </div>
+            <div className="rounded-[24px] bg-[linear-gradient(180deg,#edf5fb_0%,#dfeefa_100%)] px-5 py-4 text-center shadow-[0_12px_28px_rgba(8,35,62,0.06)]">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#70839a]">PIN</div>
+              <div className="mt-2 font-['Sora'] text-3xl font-extrabold tracking-[0.25em] text-[#1260a1]">{safetyCode}</div>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <button
+              onClick={copySafetyCode}
+              className="rounded-[24px] bg-[linear-gradient(135deg,#1260a1_0%,#0a3760_100%)] px-4 py-3 text-sm font-bold text-white shadow-[0_18px_34px_rgba(8,35,62,0.18)]"
+            >
+              Copier le PIN
+            </button>
+            <button
+              onClick={shareTrip}
+              className="rounded-[24px] bg-white px-4 py-3 text-sm font-bold text-[#1260a1] shadow-[0_12px_26px_rgba(8,35,62,0.08)]"
+            >
+              Partager la course
+            </button>
+            <button
+              onClick={sendEmergencyAlert}
+              disabled={sendingAlert}
+              className="rounded-[24px] bg-[#fff1f1] px-4 py-3 text-sm font-bold text-[#a54b55] shadow-[0_12px_26px_rgba(8,35,62,0.08)] disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {sendingAlert ? "Alerte..." : "SOS / Signaler"}
+            </button>
+            <button
+              onClick={() => navigate("/security-support")}
+              className="rounded-[24px] bg-white px-4 py-3 text-sm font-bold text-[#1260a1] shadow-[0_12px_26px_rgba(8,35,62,0.08)]"
+            >
+              Ouvrir support sécurité
+            </button>
+          </div>
+
+          {statusMessage && (
+            <div className="mt-4 rounded-2xl bg-[#f7fbff] px-4 py-3 text-sm text-[#165c96]">
+              {statusMessage}
+            </div>
+          )}
+        </section>
 
         <section className="ndar-card rounded-[38px] p-4">
           <div className="h-[360px] overflow-hidden rounded-[30px]">

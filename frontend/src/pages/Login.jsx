@@ -39,7 +39,7 @@ const Login = () => {
             Retour dans votre espace
           </div>
           <div className="mt-4 font-['Sora'] text-[40px] font-extrabold text-white">
-            Ndar<span className="text-[#f1c778]">Express</span>
+            Yoonbi
           </div>
           <p className="mt-3 text-sm text-[#eaf3fb]">Connectez-vous pour reprendre vos trajets, vos commandes et votre activite.</p>
         </div>

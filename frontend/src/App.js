@@ -8,12 +8,17 @@ import Welcome from "./pages/Welcome"
 import Home from "./pages/Home"
 import Ride from "./pages/Ride"
 import Service from "./pages/Service"
+import Rental from "./pages/Rental"
+import RentalDetail from "./pages/RentalDetail"
 import MyBookings from "./pages/MyBookings"
 import AdminDashboard from "./pages/AdminDashboard"
 import DriverDashboard from "./pages/DriverDashboard"
 import TechnicianDashboard from "./pages/TechnicianDashboard"
 import RideTracking from "./pages/RideTracking"
+import Notifications from "./pages/Notifications"
+import Support from "./pages/Support"
 import PendingApproval from "./pages/PendingApproval"
+import useSocket from "./hooks/useSocket"
 
 const DashboardRouter = () => {
   const { user } = useAuth()
@@ -53,7 +58,7 @@ const AppRoutes = () => {
       <div className="flex min-h-screen w-full items-center justify-center px-4">
         <div className="ndar-card rounded-[34px] px-8 py-10 text-center">
           <div className="font-['Sora'] text-4xl font-extrabold text-[#165c96]">
-            Ndar<span className="text-[#d7ae49]">Express</span>
+            Yoonbi
           </div>
           <p className="mt-3 text-sm text-[#70839a]">Chargement de votre espace...</p>
         </div>
@@ -100,10 +105,42 @@ const AppRoutes = () => {
         }
       />
       <Route
+        path="/notifications"
+        element={
+          <ProtectedRoute>
+            <Notifications />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/support"
+        element={
+          <ProtectedRoute>
+            <Support />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/service"
         element={
           <ProtectedRoute>
             <Service />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/rental"
+        element={
+          <ProtectedRoute>
+            <Rental />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/rental/:id"
+        element={
+          <ProtectedRoute>
+            <RentalDetail />
           </ProtectedRoute>
         }
       />
@@ -145,11 +182,17 @@ const AppRoutes = () => {
   )
 }
 
+const SocketLifecycle = () => {
+  useSocket()
+  return null
+}
+
 const App = () => {
   return (
     <Router>
       <AuthProvider>
         <ToastProvider>
+          <SocketLifecycle />
           <div className="min-h-screen selection:bg-[#d7ae49]/30">
             <AppRoutes />
           </div>

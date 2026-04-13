@@ -30,7 +30,19 @@ const attachCommission = (grossAmount, percent) => {
 }
 
 const rideCommission = (price) => attachCommission(price, 12)
-const serviceCommission = (price) => attachCommission(price, 15)
+// Les services doivent toujours contribuer au moins un petit montant
+// pour éviter qu'un petit devis tombe à 0 FCFA après arrondissement.
+const serviceCommission = (price) => {
+  const commission = attachCommission(price, 1)
+  if (commission.appCommissionAmount < 100) {
+    return {
+      ...commission,
+      appCommissionAmount: 100,
+      providerNetAmount: Math.max(0, Math.max(0, Number(price) || 0) - 100)
+    }
+  }
+  return commission
+}
 
 module.exports = {
   computeRideFare,
