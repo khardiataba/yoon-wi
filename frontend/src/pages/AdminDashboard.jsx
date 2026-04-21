@@ -120,7 +120,7 @@ const AdminDashboard = () => {
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="font-['Sora'] text-xl font-bold text-[#16324f]">Contributions services</h2>
-              <p className="text-sm text-[#5a8fd1]">Suivi des contributions obligatoires de 1% avec minimum 100 F pour les services.</p>
+              <p className="text-sm text-[#5a8fd1]">Suivi des contributions obligatoires de 1% pour les services.</p>
             </div>
             <div className="rounded-full bg-[#edf5fb] px-3 py-2 text-xs font-bold text-[#165c96]">
               {serviceContributions.filter((item) => item.platformContributionStatus === "due").length} dues

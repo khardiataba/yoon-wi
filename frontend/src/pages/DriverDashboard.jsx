@@ -228,7 +228,7 @@ const DriverDashboard = () => {
                             <span>{ride.durationMin ? `${ride.durationMin} min` : "Temps estime"}</span>
                           </div>
                           <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
-                            <span className="rounded-full bg-[#edf5fb] px-3 py-2 text-[#1260a1]">Commission appli: {ride.appCommissionPercent || 12}% ({(ride.appCommissionAmount || 0).toLocaleString()} F)</span>
+                            <span className="rounded-full bg-[#edf5fb] px-3 py-2 text-[#1260a1]">Commission appli: {ride.appCommissionPercent || 1}% ({(ride.appCommissionAmount || 0).toLocaleString()} F)</span>
                             <span className="rounded-full bg-[#eefaf2] px-3 py-2 text-[#178b55]">Net chauffeur: {(ride.providerNetAmount || Math.max(0, (ride.price || 0) - (ride.appCommissionAmount || 0))).toLocaleString()} F</span>
                           </div>
                         </div>
@@ -260,7 +260,7 @@ const DriverDashboard = () => {
                           <div className="font-semibold text-[#16324f]">{ride.vehicleType}</div>
                           <div className="mt-1 text-sm text-[#5a8fd1]">{formatRideLabel(ride)}</div>
                           <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
-                            <span className="rounded-full bg-[#edf5fb] px-3 py-2 text-[#1260a1]">Commission appli: {ride.appCommissionPercent || 12}% ({(ride.appCommissionAmount || 0).toLocaleString()} F)</span>
+                            <span className="rounded-full bg-[#edf5fb] px-3 py-2 text-[#1260a1]">Commission appli: {ride.appCommissionPercent || 1}% ({(ride.appCommissionAmount || 0).toLocaleString()} F)</span>
                             <span className="rounded-full bg-[#eefaf2] px-3 py-2 text-[#178b55]">Net chauffeur: {(ride.providerNetAmount || Math.max(0, (ride.price || 0) - (ride.appCommissionAmount || 0))).toLocaleString()} F</span>
                           </div>
                         </div>

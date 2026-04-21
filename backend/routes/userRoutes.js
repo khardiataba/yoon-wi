@@ -3,6 +3,7 @@ const express = require("express")
 const router = express.Router()
 const { authMiddleware } = require("../middleware/auth")
 const User = require("../models/User")
+const upload = require("../middleware/upload")
 
 // Get user profile
 router.get("/profile", authMiddleware, async (req, res) => {

@@ -384,12 +384,8 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
           throw new Error("Le montant de contribution est obligatoire.")
         }
 
-        if (amountPaid < 100) {
-          throw new Error("Le montant minimum de contribution est de 100 FCFA.")
-        }
-
-        if (amountPaid > 10000) {
-          throw new Error("Le montant maximum de contribution est de 10 000 FCFA.")
+        if (amountPaid > 1000000) {
+          throw new Error("Le montant de contribution semble invalide.")
         }
 
         if (expectedAmount > 0 && amountPaid !== expectedAmount) {
@@ -684,7 +680,7 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
                             </div>
                           )}
                           <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
-                            <span className="rounded-full bg-[#edf5fb] px-3 py-2 text-[#1260a1]">Contribution appli: {req.appCommissionPercent || 1}% min. 100 F ({(req.appCommissionAmount || 0).toLocaleString()} F)</span>
+                            <span className="rounded-full bg-[#edf5fb] px-3 py-2 text-[#1260a1]">Contribution appli: {req.appCommissionPercent || 1}% ({(req.appCommissionAmount || 0).toLocaleString()} F)</span>
                             <span className="rounded-full bg-[#eefaf2] px-3 py-2 text-[#178b55]">Net prestataire: {(req.providerNetAmount || Math.max(0, (req.price || 0) - (req.appCommissionAmount || 0))).toLocaleString()} F</span>
                           </div>
                           <div className="mt-2 text-xs font-semibold text-[#70839a]">Contribution app: {req.platformContributionStatus || "due"}</div>
@@ -751,7 +747,7 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
                             )}
                           </div>
                           <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
-                            <span className="rounded-full bg-[#edf5fb] px-3 py-2 text-[#1260a1]">Contribution appli: {req.appCommissionPercent || 1}% min. 100 F ({(req.appCommissionAmount || 0).toLocaleString()} F)</span>
+                            <span className="rounded-full bg-[#edf5fb] px-3 py-2 text-[#1260a1]">Contribution appli: {req.appCommissionPercent || 1}% ({(req.appCommissionAmount || 0).toLocaleString()} F)</span>
                             <span className="rounded-full bg-[#eefaf2] px-3 py-2 text-[#178b55]">Net prestataire: {(req.providerNetAmount || Math.max(0, (req.price || 0) - (req.appCommissionAmount || 0))).toLocaleString()} F</span>
                           </div>
                           <div className="mt-2 text-xs font-semibold text-[#70839a]">Contribution app: {req.platformContributionStatus || "due"}</div>

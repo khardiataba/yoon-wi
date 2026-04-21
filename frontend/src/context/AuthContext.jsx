@@ -48,6 +48,13 @@ export const AuthProvider = ({ children }) => {
     setSession(null, null)
   }
 
+  const updateUser = (partialUser) => {
+    setUser((prev) => {
+      if (!prev) return partialUser || null
+      return { ...prev, ...(partialUser || {}) }
+    })
+  }
+
   const fetchProfile = async () => {
     try {
       const res = await api.get("/auth/me")
@@ -76,7 +83,7 @@ export const AuthProvider = ({ children }) => {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, setSession, fetchProfile }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, setSession, fetchProfile, updateUser }}>
       {children}
     </AuthContext.Provider>
   )

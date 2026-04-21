@@ -39,12 +39,7 @@ export default function ServiceDetails() {
         setLoading(true)
         const serviceRes = await api.get(`/services/${id}`)
         setService(serviceRes.data)
-
-        // Load provider if accepted
-        if (serviceRes.data.assignedTechnicianId) {
-          const providerRes = await api.get(`/user/${serviceRes.data.assignedTechnicianId}`)
-          setProvider(providerRes.data)
-        }
+        setProvider(serviceRes.data.technicianId || null)
 
         // Load messages
         const msgRes = await api.get(`/services/${id}/messages`)
@@ -103,8 +98,9 @@ export default function ServiceDetails() {
 
   if (!service) return <div className="min-h-screen p-4">Service non trouvé</div>
 
-  const isProvider = user.role === 'technician' || user.role === 'driver' || user.role === 'vendor'
-  const isClient = service.clientId === user._id
+  const clientId = typeof service.clientId === "object" ? service.clientId?._id : service.clientId
+  const isClient = String(clientId || "") === String(user?._id || "")
+  const canCloseMission = contributionStatus === "paid" && messages.length > 0
 
   return (
     <div className="min-h-screen bg-[#f7f1e6] pb-24">
@@ -122,15 +118,15 @@ export default function ServiceDetails() {
         </div>
 
         {/* Service Info */}
-        <div className="space-y-2">
-          <h2 className="text-2xl font-bold">{service.title || service.category}</h2>
-          <p className="text-sm text-white/80">{service.description}</p>
-          <div className="flex gap-3 text-sm">
-            <span className="bg-white/20 px-3 py-1 rounded-full">
-              {service.status === 'accepted' ? '🟢 En cours' : service.status === 'completed' ? '✅ Terminé' : '⏳ Pending'}
-            </span>
-            <span className="bg-white/20 px-3 py-1 rounded-full">{service.price?.toLocaleString() || '?'} FCFA</span>
-          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold">{service.title || service.category}</h2>
+            <p className="text-sm text-white/80">{service.description}</p>
+            <div className="flex gap-3 text-sm">
+              <span className="bg-white/20 px-3 py-1 rounded-full">
+                {service.status === 'accepted' ? 'En cours' : service.status === 'completed' ? 'Terminé' : 'En attente'}
+              </span>
+              <span className="bg-white/20 px-3 py-1 rounded-full">{service.price?.toLocaleString() || '?'} FCFA</span>
+            </div>
         </div>
       </div>
 
@@ -142,9 +138,9 @@ export default function ServiceDetails() {
             <div className="flex gap-4 items-start">
               {/* Provider Photo */}
               <div className="flex-shrink-0">
-                {provider.profilePhoto ? (
+                {(provider.profilePhotoUrl || provider.profilePhoto) ? (
                   <img
-                    src={getAssetUrl(provider.profilePhoto)}
+                    src={getAssetUrl(provider.profilePhotoUrl || provider.profilePhoto)}
                     alt={provider.name}
                     className="w-24 h-24 rounded-[20px] object-cover shadow-md"
                   />
@@ -159,13 +155,12 @@ export default function ServiceDetails() {
               <div className="flex-1 space-y-3">
                 <div>
                   <h4 className="text-xl font-bold text-[#16324f]">{provider.name}</h4>
-                  <p className="text-sm text-[#70839a]">{provider.role === 'driver' ? '🚗 Chauffeur' : provider.role === 'technician' ? '🔧 Technicien' : '📦 Vendeur'}</p>
+                  <p className="text-sm text-[#70839a]">{provider.role === 'driver' ? 'Chauffeur' : provider.role === 'technician' ? 'Technicien' : 'Prestataire'}</p>
                 </div>
 
                 {/* Rating */}
                 {provider.rating && (
                   <div className="flex items-center gap-2">
-                    <span className="text-xl">⭐</span>
                     <span className="font-semibold text-[#165c96]">{provider.rating.toFixed(1)}</span>
                     <span className="text-sm text-[#70839a]">({provider.totalRatings} avis)</span>
                   </div>
@@ -174,14 +169,14 @@ export default function ServiceDetails() {
                 {/* Contact Info */}
                 <div className="space-y-2 pt-2 border-t border-[#e6dccf]">
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">📱</span>
+                    <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[#70839a]">Tel</span>
                     <a href={`tel:${provider.phone}`} className="text-[#1260a1] font-semibold hover:underline">
                       {provider.phone}
                     </a>
                   </div>
                   {provider.email && (
                     <div className="flex items-center gap-2">
-                      <span className="text-lg">✉️</span>
+                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[#70839a]">Email</span>
                       <a href={`mailto:${provider.email}`} className="text-[#1260a1] font-semibold hover:underline">
                         {provider.email}
                       </a>
@@ -189,38 +184,38 @@ export default function ServiceDetails() {
                   )}
                   {provider.address && (
                     <div className="flex items-center gap-2">
-                      <span className="text-lg">📍</span>
+                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[#70839a]">Adresse</span>
                       <span className="text-[#70839a]">{provider.address}</span>
                     </div>
                   )}
                   
                   {/* GPS Coordinates - New */}
-                  {provider.coordinates?.lat && provider.coordinates?.lng && (
+                  {provider.providerDetails?.coordinates?.lat && provider.providerDetails?.coordinates?.lng && (
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">🗺️</span>
+                        <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[#70839a]">GPS</span>
                         <span className="text-[#165c96] font-semibold">Localisation GPS</span>
                       </div>
                       <div className="ml-6 space-y-1 mt-1">
-                        <p className="text-xs text-[#70839a]">Lat: {provider.coordinates.lat.toFixed(4)}</p>
-                        <p className="text-xs text-[#70839a]">Lng: {provider.coordinates.lng.toFixed(4)}</p>
+                        <p className="text-xs text-[#70839a]">Lat: {provider.providerDetails.coordinates.lat.toFixed(4)}</p>
+                        <p className="text-xs text-[#70839a]">Lng: {provider.providerDetails.coordinates.lng.toFixed(4)}</p>
                         <a 
-                          href={`https://maps.google.com/?q=${provider.coordinates.lat},${provider.coordinates.lng}`}
+                          href={`https://maps.google.com/?q=${provider.providerDetails.coordinates.lat},${provider.providerDetails.coordinates.lng}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-[#1260a1] text-xs font-semibold hover:underline block mt-2"
                         >
-                          📌 Ouvrir dans Google Maps
+                          Ouvrir dans Google Maps
                         </a>
                       </div>
                     </div>
                   )}
                   
                   {/* Service Area - New */}
-                  {provider.serviceArea && (
+                  {provider.providerDetails?.serviceArea && (
                     <div className="flex items-center gap-2">
-                      <span className="text-lg">📌</span>
-                      <span className="text-[#70839a] text-sm">Zone: <span className="font-semibold text-[#165c96]">{provider.serviceArea}</span></span>
+                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[#70839a]">Zone</span>
+                      <span className="text-[#70839a] text-sm">Zone: <span className="font-semibold text-[#165c96]">{provider.providerDetails.serviceArea}</span></span>
                     </div>
                   )}
                 </div>
@@ -232,15 +227,15 @@ export default function ServiceDetails() {
         {/* Contribution Status */}
         {isClient && service.status === 'accepted' && (
           <div className="bg-white rounded-[30px] p-6 shadow-lg">
-            <h3 className="text-lg font-bold mb-4 text-[#16324f]">💰 Contribution Plateforme</h3>
+            <h3 className="text-lg font-bold mb-4 text-[#16324f]">Contribution Plateforme</h3>
             {contributionStatus === 'paid' ? (
               <div className="bg-[#eefaf2] border-2 border-[#18c56e] rounded-[20px] p-4">
-                <p className="text-[#178b55] font-semibold">✅ Contribution payée</p>
+                <p className="text-[#178b55] font-semibold">Contribution payée</p>
                 <p className="text-sm text-[#70839a] mt-1">{(service.appCommissionAmount || 0).toLocaleString()} FCFA</p>
               </div>
             ) : (
               <div className="bg-[#fff1f1] border-2 border-[#c45860] rounded-[20px] p-4">
-                <p className="text-[#c45860] font-semibold">⚠️ Contribution en attente</p>
+                <p className="text-[#c45860] font-semibold">Contribution en attente</p>
                 <p className="text-sm text-[#70839a] mt-1">{(service.appCommissionAmount || 0).toLocaleString()} FCFA</p>
                 <button
                   onClick={verifyContribution}
@@ -256,29 +251,35 @@ export default function ServiceDetails() {
         {/* Chat Section */}
         {service.status === 'accepted' && (
           <div className="bg-white rounded-[30px] p-6 shadow-lg">
-            <h3 className="text-lg font-bold mb-4 text-[#16324f]">💬 Communication</h3>
+            <h3 className="text-lg font-bold mb-4 text-[#16324f]">Communication</h3>
+            <div className="mb-4 rounded-[18px] border border-[#dce7f0] bg-[#f8fbff] px-4 py-3 text-sm text-[#5f7184]">
+              Clôture possible uniquement après contribution validée et échange réel entre client et prestataire.
+            </div>
 
             {/* Messages */}
             <div className="bg-[#f7f1e6] rounded-[20px] p-4 h-64 overflow-y-auto mb-4 space-y-3">
               {messages.length === 0 ? (
                 <p className="text-[#70839a] text-center py-20">Aucun message. Commencez la conversation!</p>
               ) : (
-                messages.map((msg, idx) => (
-                  <div key={idx} className={`flex gap-2 ${msg.senderId === user._id ? 'justify-end' : 'justify-start'}`}>
+                messages.map((msg, idx) => {
+                  const senderId = typeof msg.senderId === "object" ? msg.senderId?._id : msg.senderId
+                  const mine = String(senderId || "") === String(user?._id || "")
+                  return (
+                  <div key={idx} className={`flex gap-2 ${mine ? 'justify-end' : 'justify-start'}`}>
                     <div
                       className={`max-w-xs px-4 py-2 rounded-[20px] ${
-                        msg.senderId === user._id
+                        mine
                           ? 'bg-[#1260a1] text-white rounded-br-none'
                           : 'bg-white text-[#16324f] rounded-bl-none border border-[#e6dccf]'
                       }`}
                     >
                       <p className="text-sm">{msg.content}</p>
-                      <p className={`text-xs mt-1 ${msg.senderId === user._id ? 'text-white/60' : 'text-[#70839a]'}`}>
+                      <p className={`text-xs mt-1 ${mine ? 'text-white/60' : 'text-[#70839a]'}`}>
                         {new Date(msg.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
                   </div>
-                ))
+                )})
               )}
             </div>
 
@@ -305,14 +306,15 @@ export default function ServiceDetails() {
 
         {/* Service Status Timeline */}
         <div className="bg-white rounded-[30px] p-6 shadow-lg">
-          <h3 className="text-lg font-bold mb-4 text-[#16324f]">📍 Progression</h3>
+          <h3 className="text-lg font-bold mb-4 text-[#16324f]">Progression</h3>
           <div className="space-y-4">
             {[
               { step: 'Demande créée', completed: true, icon: '✓' },
-              { step: 'Prestataire accepté', completed: service.status !== 'pending', icon: service.status !== 'pending' ? '✓' : '⏳' },
-              { step: 'Contribution vérifiée', completed: contributionStatus === 'paid' && service.status !== 'pending', icon: contributionStatus === 'paid' ? '✓' : '⏳' },
-              { step: 'Commencé', completed: service.status === 'in_progress', icon: service.status === 'in_progress' ? '✓' : '⏳' },
-              { step: 'Terminé', completed: service.status === 'completed', icon: service.status === 'completed' ? '✓' : '⏳' }
+              { step: 'Prestataire accepté', completed: service.status !== 'pending', icon: service.status !== 'pending' ? '✓' : '...' },
+              { step: 'Contribution vérifiée', completed: contributionStatus === 'paid' && service.status !== 'pending', icon: contributionStatus === 'paid' ? '✓' : '...' },
+              { step: 'Communication active', completed: messages.length > 0, icon: messages.length > 0 ? '✓' : '...' },
+              { step: 'Prêt à clôturer', completed: canCloseMission, icon: canCloseMission ? '✓' : '...' },
+              { step: 'Terminé', completed: service.status === 'completed', icon: service.status === 'completed' ? '✓' : '...' }
             ].map((item, idx) => (
               <div key={idx} className="flex items-center gap-3">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${

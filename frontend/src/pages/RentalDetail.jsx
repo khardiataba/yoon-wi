@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react"
 import { useParams, useLocation, useNavigate } from "react-router-dom"
 import api from "../api"
-import BottomNav from "../components/BottomNav"
 import GalleryViewer from "../components/GalleryViewer"
 import Toast from "../components/Toast"
 
@@ -341,7 +340,6 @@ const RentalDetail = () => {
       {/* Toast */}
       {toastMessage && <Toast message={toastMessage} onClose={() => setToastMessage(null)} />}
 
-      <BottomNav />
     </div>
   )
 }

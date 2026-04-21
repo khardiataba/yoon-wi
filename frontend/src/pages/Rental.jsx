@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import api from "../api"
-import BottomNav from "../components/BottomNav"
 import VehicleCard from "../components/VehicleCard"
 import Toast from "../components/Toast"
 
@@ -183,7 +182,6 @@ const Rental = () => {
       {/* Toast */}
       {toastMessage && <Toast message={toastMessage} onClose={() => setToastMessage(null)} />}
 
-      <BottomNav />
     </div>
   )
 }

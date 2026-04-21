@@ -10,9 +10,9 @@ const MainLayout = ({ children }) => {
   }
 
   return (
-    <div className="flex flex-col min-h-screen pb-32">
+    <div className="flex min-h-screen flex-col">
       <TopNav />
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 pt-[98px] pb-[108px] sm:pt-[112px] sm:pb-[124px]">
         {children}
       </main>
       <BottomNav />

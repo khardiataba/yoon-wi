@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import api from "../api"
-import BottomNav from "../components/BottomNav"
 import MapPicker from "../components/MapPicker"
 
 const categories = [
@@ -625,7 +624,6 @@ const Service = () => {
         </div>
       </div>
 
-      <BottomNav />
     </div>
   )
 }

@@ -1,13 +1,41 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" role="img" aria-labelledby="title desc">
   <title id="title">YOON WI logo</title>
-  <desc id="desc">Logo minimaliste YOON WI avec les initiales Y et W</desc>
+  <desc id="desc">Logo YOON WI avec symbole de trajectoire et slogan</desc>
   <defs>
-    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#165c96;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#f1c778;stop-opacity:1" />
+    <linearGradient id="yoonwiBlueTeal" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1f3f9f" />
+      <stop offset="100%" stop-color="#13b7b9" />
     </linearGradient>
+    <style>
+      .wordmark { font-family: 'Sora', 'Montserrat', Arial, sans-serif; font-weight: 800; letter-spacing: 2px; }
+      .tagline { font-family: 'Sora', 'Montserrat', Arial, sans-serif; font-weight: 500; letter-spacing: 1.5px; }
+    </style>
   </defs>
-  <rect width="512" height="512" rx="96" fill="url(#grad)" />
-  <path d="M160 128h64l96 256h-64l-19.2-51.2H208L188.8 384H128L160 128zm112 128l-30.4-81.6L221.6 256h50.4z" fill="#fff" />
-  <text x="256" y="456" text-anchor="middle" fill="#ffffff" font-family="Sora, Arial, sans-serif" font-size="48" font-weight="800">YOON WI</text>
+
+  <rect width="900" height="600" fill="#ffffff" />
+
+  <!-- Left curved lane -->
+  <path d="M250 225 C305 220, 345 255, 360 305" fill="none" stroke="#2f72b6" stroke-width="18" stroke-linecap="round"/>
+  <path d="M246 270 C288 270, 326 292, 338 330" fill="none" stroke="#1f5aab" stroke-width="14" stroke-linecap="round"/>
+
+  <!-- Main rising route -->
+  <path d="M355 350 C370 245, 455 175, 600 90" fill="none" stroke="url(#yoonwiBlueTeal)" stroke-width="24" stroke-linecap="round"/>
+  <path d="M390 350 C405 265, 470 210, 582 132" fill="none" stroke="url(#yoonwiBlueTeal)" stroke-width="12" stroke-linecap="round"/>
+
+  <!-- Arrow head -->
+  <path d="M566 88 L640 78 L615 146" fill="none" stroke="#16b2b8" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Inner check stroke -->
+  <path d="M510 230 L545 275 L595 180" fill="none" stroke="url(#yoonwiBlueTeal)" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Wordmark -->
+  <text x="450" y="470" text-anchor="middle" class="wordmark" font-size="96">
+    <tspan fill="#1f3f9f">YOON</tspan>
+    <tspan dx="16" fill="#13b7b9">WI</tspan>
+  </text>
+
+  <!-- Tagline -->
+  <text x="450" y="530" text-anchor="middle" class="tagline" font-size="42" fill="#6c7077">
+    VOTRE CHEMIN, NOTRE ENGAGEMENT
+  </text>
 </svg>

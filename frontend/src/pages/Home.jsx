@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
-import BottomNav from "../components/BottomNav"
 import MapPicker from "../components/MapPicker"
 import SpeechInput from "../components/SpeechInput"
 import api from "../api"
@@ -502,13 +501,13 @@ const Home = () => {
                 <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-white bg-white shadow-lg shadow-black/20">
                   <img
                     src="/logo.svg"
-                    alt="YOON WI"
+                    alt="YOONWI"
                     className="h-10 w-10 rounded-full object-cover"
                     onError={(e) => { e.target.src = '/logo512.png'; }}
                   />
                 </div>
                 <div className="font-['Sora'] text-2xl sm:text-[34px] font-extrabold leading-none text-white whitespace-nowrap">
-                  YOON WI
+                  YOONWI
                 </div>
               </div>
               <div className="mt-1 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-2 text-sm font-semibold text-[#f3f8fc]">
@@ -626,7 +625,7 @@ const Home = () => {
           <div className={`min-h-[240px] rounded-[32px] bg-gradient-to-br ${featureCards[activeSlide].accent} p-6 text-white shadow-[0_28px_70px_rgba(8,35,62,0.22)] transition-all duration-500`}>
             <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#ffd700]">Modern style, esprit YOON WI</p>
+                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#ffd700]">Modern style, esprit YOONWI</p>
                 <h1 className="mt-3 max-w-[220px] font-['Sora'] text-3xl font-extrabold leading-tight">{featureCards[activeSlide].title}</h1>
                 <p className="mt-3 max-w-[250px] text-sm text-[#fff7ec]">{featureCards[activeSlide].subtitle}</p>
               </div>
@@ -856,7 +855,6 @@ const Home = () => {
         </section>
       </div>
 
-      <BottomNav />
     </div>
   )
 }

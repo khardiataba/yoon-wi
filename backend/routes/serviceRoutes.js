@@ -721,6 +721,13 @@ router.patch(
         return res.status(400).json({ message: "La contribution obligatoire de l'application doit être réglée avant la clôture" })
       }
 
+      const messageParticipants = await Message.distinct("senderId", { serviceId: req.params.id })
+      if (messageParticipants.length < 2) {
+        return res.status(400).json({
+          message: "Une vraie communication client-prestataire est obligatoire avant la clôture de la mission"
+        })
+      }
+
       request.status = "completed"
       await request.save()
 
@@ -807,12 +814,12 @@ router.get("/:id/messages", authMiddleware, requireVerified, async (req, res) =>
     }
 
     // Check authorization
-    if (request.clientId.toString() !== req.user._id.toString() && 
-        request.assignedTechnicianId?.toString() !== req.user._id.toString()) {
+    if (request.clientId.toString() !== req.user._id.toString() &&
+        request.technicianId?.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "Accès non autorisé" })
     }
 
-    const messages = await Message.find({ serviceId: id }).sort({ createdAt: 1 }).populate('senderId', 'name profilePhoto')
+    const messages = await Message.find({ serviceId: id }).sort({ createdAt: 1 }).populate("senderId", "name firstName lastName profilePhotoUrl profilePhoto")
     return res.json(messages)
   } catch (err) {
     console.error(err)
@@ -836,8 +843,8 @@ router.post("/:id/messages", authMiddleware, requireVerified, async (req, res) =
     }
 
     // Check authorization
-    if (request.clientId.toString() !== req.user._id.toString() && 
-        request.assignedTechnicianId?.toString() !== req.user._id.toString()) {
+    if (request.clientId.toString() !== req.user._id.toString() &&
+        request.technicianId?.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "Accès non autorisé" })
     }
 
@@ -853,7 +860,7 @@ router.post("/:id/messages", authMiddleware, requireVerified, async (req, res) =
       content: String(content).trim()
     })
 
-    const populated = await message.populate('senderId', 'name profilePhoto')
+    const populated = await message.populate("senderId", "name firstName lastName profilePhotoUrl profilePhoto")
     return res.status(201).json(populated)
   } catch (err) {
     console.error(err)
@@ -905,7 +912,9 @@ router.post("/:id/verify-contribution", authMiddleware, requireVerified, async (
 router.get("/:id", authMiddleware, requireVerified, async (req, res) => {
   try {
     const { id } = req.params
-    const request = await ServiceRequest.findById(id).populate('clientId', 'name phone email').populate('assignedTechnicianId', 'name profilePhoto phone email rating role address')
+    const request = await ServiceRequest.findById(id)
+      .populate("clientId", "name firstName lastName phone email")
+      .populate("technicianId", "name firstName lastName profilePhotoUrl profilePhoto phone email rating role address providerDetails")
     
     if (!request) {
       return res.status(404).json({ message: "Service non trouvé" })
@@ -913,7 +922,7 @@ router.get("/:id", authMiddleware, requireVerified, async (req, res) => {
 
     // Check authorization
     const isClient = request.clientId._id.toString() === req.user._id.toString()
-    const isProvider = request.assignedTechnicianId?._id.toString() === req.user._id.toString()
+    const isProvider = request.technicianId?._id.toString() === req.user._id.toString()
     
     if (!isClient && !isProvider && req.user.role !== 'admin') {
       return res.status(403).json({ message: "Accès non autorisé" })
@@ -931,7 +940,7 @@ router.get("/:id", authMiddleware, requireVerified, async (req, res) => {
       providerNetAmount: request.providerNetAmount,
       platformContributionStatus: request.platformContributionStatus,
       clientId: request.clientId,
-      assignedTechnicianId: request.assignedTechnicianId,
+      technicianId: request.technicianId,
       createdAt: request.createdAt,
       updatedAt: request.updatedAt,
       location: request.location

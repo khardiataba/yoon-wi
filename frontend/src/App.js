@@ -66,7 +66,7 @@ const AppRoutes = () => {
       <div className="flex min-h-screen w-full items-center justify-center px-4">
         <div className="ndar-card rounded-[34px] px-8 py-10 text-center">
           <div className="font-['Sora'] text-4xl font-extrabold text-[#165c96]">
-            YOON WI
+            YOONWI
           </div>
           <p className="mt-3 text-sm text-[#5a8fd1]">Chargement de votre espace...</p>
         </div>

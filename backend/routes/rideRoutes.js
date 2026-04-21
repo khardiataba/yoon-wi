@@ -5,7 +5,7 @@ const Ride = require("../models/Ride")
 const User = require("../models/User")
 const socketManager = require("../socket/socketManager")
 const { authMiddleware, requireRole, requireVerified } = require("../middleware/auth")
-const { computeRideFare, rideCommission } = require("../utils/pricing")
+const { computeRideFare, computeStudentBusFare, normalizeStudentBusZone, rideCommission } = require("../utils/pricing")
 const { createNotification } = require("../services/notificationService")
 const { getPaginationParams, buildPaginatedResponse } = require("../utils/pagination")
 const { validateLocationPair } = require("../utils/locationValidation")
@@ -157,7 +157,7 @@ const maybeSuspendUser = async (userId, reason) => {
 // Créer une nouvelle réservation (client)
 router.post("/", authMiddleware, requireVerified, async (req, res) => {
   try {
-    const { pickup, destination, price, vehicleType, paymentMethod, distanceKm, durationMin } = req.body
+    const { pickup, destination, price, vehicleType, paymentMethod, distanceKm, durationMin, rideMode, busZone, busOptions } = req.body
     if (!pickup || !destination || !price) {
       return res.status(400).json({ message: "pickup, destination et price requis" })
     }
@@ -173,9 +173,44 @@ router.post("/", authMiddleware, requireVerified, async (req, res) => {
       return res.status(400).json({ message: "Prix invalide" })
     }
 
-    const finalPrice = computeRideFare(distanceKm, durationMin)
+    const normalizedBusZone = normalizeStudentBusZone(busZone)
+    const isStudentBus = rideMode === "bus_student" && Boolean(normalizedBusZone)
+    const finalPrice = isStudentBus ? computeStudentBusFare(normalizedBusZone) : computeRideFare(distanceKm, durationMin)
     const commission = rideCommission(finalPrice)
     const safetyCode = generateSafetyCode()
+    const safeBusOptions = {
+      subscriptionPlan: "none",
+      reservedSeat: false,
+      seats: 1,
+      travelDate: null,
+      useTransportCredit: false,
+      creditAmount: 0,
+      amountPaidNow: 0,
+      amountRemaining: 0
+    }
+
+    if (isStudentBus && busOptions && typeof busOptions === "object") {
+      const plan = String(busOptions.subscriptionPlan || "none").trim().toLowerCase()
+      safeBusOptions.subscriptionPlan = ["none", "daily", "weekly", "monthly"].includes(plan) ? plan : "none"
+      safeBusOptions.reservedSeat = Boolean(busOptions.reservedSeat)
+      safeBusOptions.seats = Math.max(1, Math.min(4, Number(busOptions.seats) || 1))
+      const parsedTravelDate = busOptions.travelDate ? new Date(busOptions.travelDate) : null
+      safeBusOptions.travelDate = parsedTravelDate && !Number.isNaN(parsedTravelDate.getTime()) ? parsedTravelDate : null
+      safeBusOptions.useTransportCredit = Boolean(busOptions.useTransportCredit)
+      safeBusOptions.creditAmount = Math.max(0, Number(busOptions.creditAmount) || 0)
+      safeBusOptions.amountPaidNow = Math.max(0, Number(busOptions.amountPaidNow) || 0)
+      safeBusOptions.amountRemaining = Math.max(0, Number(busOptions.amountRemaining) || 0)
+
+      if (safeBusOptions.useTransportCredit) {
+        const recomputedRemaining = Math.max(0, finalPrice - safeBusOptions.amountPaidNow)
+        safeBusOptions.amountRemaining = recomputedRemaining
+      }
+    }
+
+    const rideTypeLabelByZone = {
+      police: "Bus Eleves - Jusqu'a Police",
+      ville: "Bus Eleves - Ville"
+    }
 
     const ride = await Ride.create({
       userId: req.user._id,
@@ -185,7 +220,10 @@ router.post("/", authMiddleware, requireVerified, async (req, res) => {
       ...commission,
       distanceKm: locationValidation.distanceKm || distanceKm || null,
       durationMin: durationMin || null,
-      vehicleType: vehicleType || "YOON WI Classic",
+      vehicleType: isStudentBus ? rideTypeLabelByZone[normalizedBusZone] : (vehicleType || "YOONWI Classic"),
+      rideCategory: isStudentBus ? "bus_student" : "standard",
+      busZone: isStudentBus ? normalizedBusZone : "",
+      busOptions: isStudentBus ? safeBusOptions : undefined,
       paymentMethod: paymentMethod || "Cash",
       safetyCode,
       status: "pending"
@@ -205,7 +243,7 @@ router.post("/", authMiddleware, requireVerified, async (req, res) => {
 // Estimer durée / distance via OSRM (public)
 router.post("/estimate", authMiddleware, requireVerified, async (req, res) => {
   try {
-    const { pickup, destination } = req.body
+    const { pickup, destination, rideMode, busZone } = req.body
     if (!pickup || !destination) {
       return res.status(400).json({ message: "pickup et destination requis" })
     }
@@ -214,6 +252,18 @@ router.post("/estimate", authMiddleware, requireVerified, async (req, res) => {
     const locationValidation = validateLocationPair(pickup, destination)
     if (!locationValidation.valid) {
       return res.status(400).json({ message: "Localisation invalide", errors: locationValidation.errors })
+    }
+
+    const normalizedBusZone = normalizeStudentBusZone(busZone)
+    if (rideMode === "bus_student" && normalizedBusZone) {
+      const suggestedPrice = computeStudentBusFare(normalizedBusZone)
+      return res.json({
+        distanceKm: null,
+        durationMin: null,
+        geometry: [],
+        suggestedPrice,
+        ...rideCommission(suggestedPrice)
+      })
     }
 
     const coords = `${locationValidation.pickup.lng},${locationValidation.pickup.lat};${locationValidation.destination.lng},${locationValidation.destination.lat}`

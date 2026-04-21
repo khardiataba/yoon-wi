@@ -36,6 +36,24 @@ const safetyReportSchema = new mongoose.Schema(
   { _id: false }
 )
 
+const busOptionsSchema = new mongoose.Schema(
+  {
+    subscriptionPlan: {
+      type: String,
+      enum: ["none", "daily", "weekly", "monthly"],
+      default: "none"
+    },
+    reservedSeat: { type: Boolean, default: false },
+    seats: { type: Number, default: 1 },
+    travelDate: { type: Date, default: null },
+    useTransportCredit: { type: Boolean, default: false },
+    creditAmount: { type: Number, default: 0 },
+    amountPaidNow: { type: Number, default: 0 },
+    amountRemaining: { type: Number, default: 0 }
+  },
+  { _id: false }
+)
+
 const rideSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   driverId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
@@ -47,10 +65,24 @@ const rideSchema = new mongoose.Schema({
     default: "pending"
   },
   price: { type: Number, required: true },
-  appCommissionPercent: { type: Number, default: 12 },
+  appCommissionPercent: { type: Number, default: 1 },
   appCommissionAmount: { type: Number, default: 0 },
   providerNetAmount: { type: Number, default: 0 },
-  vehicleType: { type: String, default: "YOON WI Classic" },
+  vehicleType: { type: String, default: "YOONWI Classic" },
+  rideCategory: {
+    type: String,
+    enum: ["standard", "bus_student"],
+    default: "standard"
+  },
+  busZone: {
+    type: String,
+    enum: ["", "police", "ville"],
+    default: ""
+  },
+  busOptions: {
+    type: busOptionsSchema,
+    default: () => ({})
+  },
   paymentMethod: { type: String, enum: ["Cash", "Wave", "OM", "Card"], default: "Cash" },
   distanceKm: { type: Number, default: null },
   durationMin: { type: Number, default: null },

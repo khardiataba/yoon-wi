@@ -3,6 +3,11 @@
         "codeium.codeium-enterprise-updater",
         "google.geminicodeassist",
         "punal100.antigravity-copilot",
-        "lirobi.phone-preview"
+        "lirobi.phone-preview",
+        "codexbuild.codex-build",
+        "codeflow-studio.claude-code-extension",
+        "continue.continue",
+        "sst-dev.opencode",
+        "masad-frost.replit"
     ]
 }

@@ -1,5 +1,24 @@
 const roundToNearestHundred = (value) => Math.max(0, Math.round(value / 100) * 100)
 
+const STUDENT_BUS_FARES = {
+  police: 150,
+  ville: 200
+}
+
+const normalizeStudentBusZone = (value) => {
+  const zone = String(value || "").trim().toLowerCase()
+  if (!zone) return null
+  if (zone.includes("police")) return "police"
+  if (zone.includes("ville") || zone.includes("city")) return "ville"
+  return null
+}
+
+const computeStudentBusFare = (zone) => {
+  const normalized = normalizeStudentBusZone(zone)
+  if (!normalized) return null
+  return STUDENT_BUS_FARES[normalized]
+}
+
 const computeRideFare = (distanceKm = 0, durationMin = 0) => {
   const safeDistance = Math.max(0, Number(distanceKm) || 0)
   const safeDuration = Math.max(0, Number(durationMin) || 0)
@@ -20,7 +39,7 @@ const computeRideFare = (distanceKm = 0, durationMin = 0) => {
 const attachCommission = (grossAmount, percent) => {
   const safeGross = Math.max(0, Number(grossAmount) || 0)
   const safePercent = Math.max(0, Number(percent) || 0)
-  const appCommissionAmount = roundToNearestHundred((safeGross * safePercent) / 100)
+  const appCommissionAmount = Math.max(0, Math.round((safeGross * safePercent) / 100))
 
   return {
     appCommissionPercent: safePercent,
@@ -29,23 +48,14 @@ const attachCommission = (grossAmount, percent) => {
   }
 }
 
-const rideCommission = (price) => attachCommission(price, 12)
-// Les services doivent toujours contribuer au moins un petit montant
-// pour éviter qu'un petit devis tombe à 0 FCFA après arrondissement.
-const serviceCommission = (price) => {
-  const commission = attachCommission(price, 1)
-  if (commission.appCommissionAmount < 100) {
-    return {
-      ...commission,
-      appCommissionAmount: 100,
-      providerNetAmount: Math.max(0, Math.max(0, Number(price) || 0) - 100)
-    }
-  }
-  return commission
-}
+const rideCommission = (price) => attachCommission(price, 1)
+const serviceCommission = (price) => attachCommission(price, 1)
 
 module.exports = {
   computeRideFare,
+  computeStudentBusFare,
+  normalizeStudentBusZone,
   rideCommission,
-  serviceCommission
+  serviceCommission,
+  STUDENT_BUS_FARES
 }

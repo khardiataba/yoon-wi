@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import api from "../api"
-import BottomNav from "../components/BottomNav"
 
 const getRideAddress = (location) => location?.name || location?.address || "Adresse indisponible"
 
@@ -246,7 +245,6 @@ const MyBookings = () => {
         )}
       </div>
 
-      <BottomNav />
     </div>
   )
 }
