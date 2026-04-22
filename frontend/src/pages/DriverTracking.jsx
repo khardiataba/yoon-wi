@@ -5,6 +5,9 @@ import { useToast } from "../context/ToastContext"
 import MapPicker from "../components/MapPicker"
 import api from "../api"
 import useSocket from "../hooks/useSocket"
+import useShakeDetection from "../hooks/useShakeDetection"
+import SOSModal from "../components/SOSModal"
+
 
 const DriverTracking = () => {
   const { rideId } = useParams()
@@ -12,7 +15,7 @@ const DriverTracking = () => {
   const { user } = useAuth()
   const { showToast } = useToast()
 
-  const [ride, setRide] = useState(null)
+  const [ride, setRide ] = useState(null)
   const [driver, setDriver] = useState(null)
   const [loading, setLoading] = useState(true)
   const [locationPermission, setLocationPermission] = useState(null)
@@ -20,6 +23,13 @@ const DriverTracking = () => {
   const [driverLocation, setDriverLocation] = useState(null)
   const [eta, setEta] = useState(null)
   const [distance, setDistance] = useState(null)
+
+  const [showSOSModal, setShowSOSModal] = useState(false)
+
+  const handleShakeSOS = () => {
+    setShowSOSModal(true)
+  }
+
 
   // Request location permission on mount
   useEffect(() => {
@@ -102,6 +112,9 @@ const DriverTracking = () => {
 
   // Socket listener for driver location updates
   useSocket()
+  
+  const { shakeDetected, clearShake } = useShakeDetection(handleShakeSOS)
+
 
   useEffect(() => {
     if (!ride || !clientLocation) return
@@ -121,7 +134,9 @@ const DriverTracking = () => {
     return (
       <div className="min-h-screen flex items-center justify-center pt-20 pb-32">
         <div className="ndar-card rounded-2xl p-8 text-center">
-          <div className="animate-spin text-4xl mb-4">🔄</div>
+          <svg className="animate-spin h-12 w-12 mb-4 text-blue-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
           <p className="text-[#fff7ec]">Chargement du suivi...</p>
         </div>
       </div>
@@ -150,19 +165,18 @@ const DriverTracking = () => {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-[#fff7ec]">Suivi du trajet</h1>
-          <button
-            onClick={() => navigate(-1)}
-            className="text-[#d7ae49] hover:text-[#e8c45f]"
-          >
-            ✕
-          </button>
+          <svg className="h-6 w-6 text-[#d7ae49] hover:text-[#e8c45f] cursor-pointer" onClick={() => navigate(-1)} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
         </div>
 
         {/* Location Permission Alert */}
         {locationPermission === false && (
           <div className="ndar-card rounded-2xl p-4 border border-red-500/30 bg-red-500/10">
             <div className="flex items-start gap-3">
-              <span className="text-2xl">⚠️</span>
+              <svg className="h-8 w-8 text-yellow-500 mt-1 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77 .833 .192 2.5 1.732 2.5z" />
+              </svg>
               <div>
                 <p className="font-semibold text-red-400 mb-2">Localisation requise</p>
                 <p className="text-sm text-[#b0bac9] mb-3">
@@ -190,9 +204,9 @@ const DriverTracking = () => {
                   className="w-16 h-16 rounded-full object-cover border-2 border-[#d7ae49]"
                 />
               ) : (
-                <div className="w-16 h-16 rounded-full bg-[#d7ae49]/20 flex items-center justify-center text-2xl">
-                  👤
-                </div>
+                <svg className="w-16 h-16 text-gray-400 bg-[#d7ae49]/20 rounded-full p-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
               )}
               <div className="flex-1">
                 <h2 className="text-lg font-bold text-[#fff7ec]">{driver.fullName}</h2>
@@ -213,10 +227,16 @@ const DriverTracking = () => {
             {/* Contact Buttons */}
             <div className="flex gap-3 pt-4 border-t border-[#d7ae49]/20">
               <button className="flex-1 bg-[#3a7dd6]/20 hover:bg-[#3a7dd6]/40 text-[#6ba3e5] font-semibold py-2 rounded-lg transition-colors">
-                📞 Appeler
+                <svg className="inline h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+                Appeler
               </button>
               <button className="flex-1 bg-[#d7ae49]/20 hover:bg-[#d7ae49]/40 text-[#ffd700] font-semibold py-2 rounded-lg transition-colors">
-                💬 Message
+                <svg className="inline h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 4.03 9 8z" />
+                </svg>
+                Message
               </button>
             </div>
           </div>
@@ -248,7 +268,9 @@ const DriverTracking = () => {
           {/* Status Timeline */}
           <div className="space-y-3">
             <div className="flex items-start gap-3">
-              <span className="text-2xl">✅</span>
+              <svg className="h-8 w-8 text-green-500 flex-shrink-0 mt-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
               <div>
                 <p className="font-semibold text-[#18c56e]">Course acceptée</p>
                 <p className="text-sm text-[#b0bac9]">Le chauffeur a accepté votre demande</p>
@@ -256,7 +278,9 @@ const DriverTracking = () => {
             </div>
             {ride.status === "ongoing" && (
               <div className="flex items-start gap-3">
-                <span className="text-2xl">🚗</span>
+                <svg className="h-8 w-8 text-blue-500 flex-shrink-0 mt-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                </svg>
                 <div>
                   <p className="font-semibold text-[#3a7dd6]">Chauffeur en route</p>
                   <p className="text-sm text-[#b0bac9]">Le chauffeur arrive vers vous</p>
@@ -280,7 +304,7 @@ const DriverTracking = () => {
                     lat: ride.pickup.lat,
                     lng: ride.pickup.lng,
                     label: "Départ",
-                    emoji: "📍",
+                    icon: "map-pin",
                     background: "#3a7dd6"
                   },
                   {
@@ -288,7 +312,7 @@ const DriverTracking = () => {
                     lat: ride.destination.lat,
                     lng: ride.destination.lng,
                     label: "Arrivée",
-                    emoji: "🎯",
+                    icon: "flag",
                     background: "#18c56e"
                   },
                   ...(driverLocation ? [{
@@ -296,7 +320,7 @@ const DriverTracking = () => {
                     lat: driverLocation.lat,
                     lng: driverLocation.lng,
                     label: "Chauffeur",
-                    emoji: "🚗",
+                    icon: "car",
                     background: "#d7ae49"
                   }] : [])
                 ]}
@@ -307,16 +331,52 @@ const DriverTracking = () => {
 
         {/* Actions */}
         <div className="ndar-card rounded-2xl p-5 space-y-3">
-          <button className="w-full bg-[#3a7dd6]/20 hover:bg-[#3a7dd6]/40 text-[#6ba3e5] font-semibold py-3 rounded-lg transition-colors border border-[#3a7dd6]/30">
-            📋 Voir les détails de la course
+          <button className="w-full bg-[#3a7dd6]/20 hover:bg-[#3a7dd6]/40 text-[#6ba3e5] font-semibold py-3 rounded-lg transition-colors border border-[#3a7dd6]/30 flex items-center">
+            <svg className="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            Voir les détails de la course
           </button>
-          <button className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 font-semibold py-3 rounded-lg transition-colors border border-red-500/20">
-            ❌ Annuler la course
+          <button className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 font-semibold py-3 rounded-lg transition-colors border border-red-500/20 flex items-center">
+            <svg className="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Annuler la course
           </button>
         </div>
       </div>
+      
+      {shakeDetected && (
+        <div className="fixed bottom-24 left-4 right-4 z-50">
+          <div className="bg-yellow-500 text-white p-4 rounded-2xl text-center shadow-2xl animate-bounce">
+            <div className="font-bold text-lg mb-2">🚨 SHAKE DÉTECTÉ</div>
+            <div className="text-sm mb-4">Secouez encore pour SOS d'urgence</div>
+            <button 
+              onClick={handleShakeSOS}
+              className="bg-red-600 px-6 py-3 rounded-xl font-bold text-white text-lg"
+            >
+              SOS URGENCE
+            </button>
+            <button 
+              onClick={clearShake}
+              className="ml-4 text-white underline text-sm"
+            >
+              Ignorer
+            </button>
+          </div>
+        </div>
+      )}
+
+      <SOSModal 
+        isOpen={showSOSModal} 
+        onClose={() => setShowSOSModal(false)}
+        rideId={rideId}
+        userRole="driver" 
+      />
     </div>
   )
 }
 
+
 export default DriverTracking
+

@@ -324,9 +324,13 @@ const Ride = () => {
           <div className="absolute inset-x-4 top-4 z-[1002] space-y-3">
             <button
               onClick={() => navigate(-1)}
-              className="rounded-2xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-white/20"
+              className="rounded-2xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-white/20 flex items-center"
             >
-              ⬅️ Retour
+              <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+              Retour
+            
             </button>
             <div className="ndar-hero-glass rounded-[30px] px-4 py-4 shadow-[0_20px_40px_rgba(8,35,62,0.18)] backdrop-blur-xl">
               <div className="flex items-center justify-between gap-3">

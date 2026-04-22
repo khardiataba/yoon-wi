@@ -8,6 +8,8 @@
         "codeflow-studio.claude-code-extension",
         "continue.continue",
         "sst-dev.opencode",
-        "masad-frost.replit"
+        "masad-frost.replit",
+        "blackboxapp.blackbox",
+        "vscjava.migrate-java-to-azure"
     ]
 }

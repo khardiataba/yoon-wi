@@ -48,8 +48,9 @@ const attachCommission = (grossAmount, percent) => {
   }
 }
 
-const rideCommission = (price) => attachCommission(price, 1)
-const serviceCommission = (price) => attachCommission(price, 1)
+const rideCommission = (price) => attachCommission(price, 10)
+const serviceCommission = (price) => attachCommission(price, 10)
+
 
 module.exports = {
   computeRideFare,
