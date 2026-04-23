@@ -3,6 +3,7 @@ import { useParams, useLocation, useNavigate } from "react-router-dom"
 import api from "../api"
 import GalleryViewer from "../components/GalleryViewer"
 import Toast from "../components/Toast"
+import AppIcon from "../components/AppIcon"
 
 const RentalDetail = () => {
   const { id } = useParams()
@@ -190,7 +191,7 @@ const RentalDetail = () => {
               {/* Features */}
               {rental.features && rental.features.length > 0 && (
                 <div className="mb-6">
-                  <h3 className="font-bold mb-2">✨ Équipements</h3>
+                  <h3 className="font-bold mb-2 flex items-center gap-2"><AppIcon name="star" className="h-5 w-5 text-[#d7ae49]" />Équipements</h3>
                   <div className="flex flex-wrap gap-2">
                     {rental.features.map((feature, idx) => (
                       <span key={idx} className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm">

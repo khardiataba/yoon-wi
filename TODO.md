@@ -1,42 +1,24 @@
-# TODO - Vérification App Ubbi Ndar
+# TODO: Remplacer Emojis par Icônes AppIcon (Plan Approuvé)
 
-## 1. ✅ Emojis remplacés par icônes (DriverTracking.jsx)
-- [x] Remplacement effectué
+## Étapes Complétées
+- [x] Explorer repo et identifier fichiers (search_files, read_file)
+- [x] Lire AppIcon.jsx, ErrorBoundary.jsx, RentalDetail.jsx, Home.jsx
+- [x] Créer TODO.md pour tracker progrès
+- [x] Ajouter icône star à AppIcon.jsx
+- [x] Éditer ErrorBoundary.jsx : Remplacer 😞 par AppIcon info
+- [x] Éditer RentalDetail.jsx : Remplacer ✨ par AppIcon star dans h3
 
-## 2. 🚀 Démarrer serveurs
-```bash
-# Terminal 1 - Backend
-cd backend
-npm install
-npm run dev
+## Étapes Complétées
+- [x] Explorer repo et identifier fichiers (search_files, read_file)
+- [x] Lire AppIcon.jsx, ErrorBoundary.jsx, RentalDetail.jsx, Home.jsx
+- [x] Créer TODO.md pour tracker progrès
+- [x] Ajouter icône star à AppIcon.jsx
+- [x] Éditer ErrorBoundary.jsx : Remplacer 😞 par AppIcon info
+- [x] Éditer RentalDetail.jsx : Remplacer ✨ par AppIcon star dans h3
+- [x] Ajouter imports AppIcon manquants (ErrorBoundary, RentalDetail)
 
-# Terminal 2 - Frontend  
-cd frontend
-npm install
-npm start
-```
+## Étapes à Faire
+1. Tester : `cd frontend && npm run dev`
+2. Vérifier icônes (RentalDetail: étoile or ; ErrorBoundary: info grise)
 
-## 3. 🧪 Données test
-```bash
-cd backend
-node seed-users.js
-```
-- Client: fatoudiallo1@gmail.com / fatoudiallo1
-- Chauffeur: moussaba1@gmail.com / moussaba1 (pending)
-- Prestataire: aissatousow1@gmail.com / aissatousow1 (technician pending)
-
-## 4. 🧑‍💻 Test Flux Complet
-1. Login client → /ride → créer course (pending)
-2. Login chauffeur → /driver-dashboard → voir available → accepter (notification/socket)
-3. Chauffeur → entrer PIN → démarrer → tracking
-4. Login prestataire → vérifier documents uploadés/vérifiés
-5. Vérifier notifications, wallet, gallery services
-
-## 5. 🔍 Vérifications Spécifiques
-- [ ] Chauffeur reçoit commande
-- [ ] Suivi temps réel marche
-- [ ] Documents vérifiés (OCR)
-- [ ] Pas d'erreurs console
-- [ ] Prestataire gallery/services OK
-
-## 6. 📱 Run Frontend
+**Statut** : 7/8 étapes (87%)

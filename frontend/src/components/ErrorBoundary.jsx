@@ -1,4 +1,5 @@
 import React from 'react'
+import AppIcon from './AppIcon'
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -29,7 +30,7 @@ class ErrorBoundary extends React.Component {
         <div className="flex min-h-screen flex-col items-center justify-center bg-red-50 px-4">
           <div className="rounded-lg bg-white p-8 shadow-lg max-w-md">
             <div className="flex items-center justify-center mb-4">
-              <div className="text-4xl">😞</div>
+              <AppIcon name="info" className="h-12 w-12 text-gray-400" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Oups! Une erreur s'est produite</h1>
             <p className="text-gray-600 mb-4">
