@@ -23,6 +23,7 @@
     "start": "vite",
     "dev": "vite",
     "build": "vite build",
+    "build:frontend": "vite build",
     "preview": "vite preview",
     "build:css": "tailwindcss -i ./src/input.css -o ./dist/output.css",
     "watch:css": "tailwindcss -i ./src/input.css -o ./dist/output.css --watch"
