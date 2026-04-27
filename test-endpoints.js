@@ -1,8 +1,12 @@
 // Test script to verify new endpoints
-const fetch = require('node-fetch');
+const fetch = globalThis.fetch
 
-const BASE_URL = 'http://localhost:5000/api';
-const TOKEN = 'test_token'; // Replace with real token
+if (typeof fetch !== "function") {
+  throw new Error("Global fetch is not available in this Node.js runtime.")
+}
+
+const BASE_URL = process.env.TEST_API_BASE_URL || 'http://localhost:5000/api';
+const TOKEN = process.env.TEST_API_TOKEN || 'test_token';
 
 async function testEndpoints() {
   try {

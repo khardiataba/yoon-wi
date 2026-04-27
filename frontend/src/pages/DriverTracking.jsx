@@ -18,7 +18,7 @@ const DriverTracking = () => {
   const { rideId } = useParams()
   const navigate = useNavigate()
   const { showToast } = useToast()
-  const { updateLocation } = useSocket()
+  const { updateLocation, goOnline, isConnected } = useSocket()
 
   const [ride, setRide] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -171,6 +171,19 @@ const DriverTracking = () => {
       }
     }
   }, [shareDriverLocation])
+
+  useEffect(() => {
+    if (!isConnected) return
+    if (!hasExactLocation(driverLocation)) return
+
+    goOnline(
+      {
+        latitude: Number(driverLocation.lat),
+        longitude: Number(driverLocation.lng)
+      },
+      ride?.vehicleType || "standard"
+    )
+  }, [driverLocation, goOnline, isConnected, ride?.vehicleType])
 
   useEffect(() => {
     const handlePassengerLocationUpdate = (event) => {

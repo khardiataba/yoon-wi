@@ -1,14 +1,9 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import api from "../api"
+import { resolveMediaUrl } from "../utils/mediaUrl"
 
 const getRideAddress = (location) => location?.name || location?.address || "Adresse indisponible"
-
-const getAssetUrl = (path) => {
-  if (!path) return ""
-  const base = String(api.defaults.baseURL || "").replace(/\/api\/?$/, "")
-  return `${base}${path}`
-}
 
 const getInitials = (name) =>
   String(name || "")
@@ -182,7 +177,7 @@ const MyBookings = () => {
                 <div className="flex items-start gap-4">
                   <div className={`flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-[20px] ${item.kind === "ride" ? "bg-[#edf5fb]" : "bg-[#fff4df]"}`}>
                     {item.person?.profilePhotoUrl ? (
-                      <img src={getAssetUrl(item.person.profilePhotoUrl)} alt={item.personLabel || item.title} className="h-full w-full object-cover" />
+                      <img src={resolveMediaUrl(item.person.profilePhotoUrl)} alt={item.personLabel || item.title} className="h-full w-full object-cover" />
                     ) : (
                       <span className="font-['Sora'] text-sm font-bold text-[#1260a1]">{getInitials(item.personLabel || item.title)}</span>
                     )}

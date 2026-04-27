@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useAuth } from "../context/AuthContext"
 import { useNavigate } from "react-router-dom"
 import { useToast } from "../context/ToastContext"
-import api, { getPublicAssetBaseURL } from "../api"
+import api from "../api"
 import ProviderPortfolio from "../components/ProviderPortfolio"
+import { resolveMediaUrl } from "../utils/mediaUrl"
 
 const Profile = () => {
   const { user, logout, updateUser } = useAuth()
@@ -35,6 +36,8 @@ const Profile = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [imagePreview, setImagePreview] = useState("")
   const [openUploadSignal, setOpenUploadSignal] = useState(0)
+  const cameraInputRef = useRef(null)
+  const galleryInputRef = useRef(null)
 
   useEffect(() => {
     if (user) {
@@ -60,9 +63,7 @@ const Profile = () => {
       })
 
       if (user.profilePhotoUrl) {
-        setImagePreview(user.profilePhotoUrl.startsWith('http') || user.profilePhotoUrl.startsWith('data:')
-          ? user.profilePhotoUrl 
-          : `${getPublicAssetBaseURL()}${user.profilePhotoUrl}`)
+        setImagePreview(resolveMediaUrl(user.profilePhotoUrl))
       }
     }
   }, [user])
@@ -82,6 +83,14 @@ const Profile = () => {
       }
       reader.readAsDataURL(file)
     }
+  }
+
+  const openCameraCapture = () => {
+    cameraInputRef.current?.click()
+  }
+
+  const openGalleryPicker = () => {
+    galleryInputRef.current?.click()
   }
 
   const handleUpdateProfile = async () => {
@@ -157,13 +166,48 @@ const Profile = () => {
                   </div>
                 )}
               </div>
-              <label className="absolute bottom-0 right-0 bg-[#d7ae49] p-2 rounded-full cursor-pointer hover:bg-[#e8c45f] transition-all">
-                <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+              <button
+                type="button"
+                onClick={openCameraCapture}
+                className="absolute bottom-0 right-0 bg-[#d7ae49] p-2 rounded-full cursor-pointer hover:bg-[#e8c45f] transition-all"
+                title="Prendre une photo"
+              >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 text-[#0a192f]">
                   <path d="M4 8h3l1.3-2h7.4L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Zm8 9a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
                 </svg>
-              </label>
+              </button>
             </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={openCameraCapture}
+                className="rounded-xl bg-[#d7ae49] px-4 py-2 text-sm font-semibold text-[#0a192f] hover:bg-[#e8c45f]"
+              >
+                Appareil
+              </button>
+              <button
+                type="button"
+                onClick={openGalleryPicker}
+                className="rounded-xl border border-[#d7ae49]/50 px-4 py-2 text-sm font-semibold text-[#fff7ec] hover:bg-white/10"
+              >
+                Galerie
+              </button>
+            </div>
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleImageChange}
+            />
+            <input
+              ref={galleryInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageChange}
+            />
           </div>
 
           {/* Form Section */}

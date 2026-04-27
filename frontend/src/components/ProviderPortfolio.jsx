@@ -7,6 +7,7 @@ import Toast from "./Toast"
 
 const ProviderPortfolio = ({ defaultTab = "view", openUploadSignal = 0 }) => {
   const { user } = useAuth()
+  const providerId = user?._id || user?.id || null
   const [gallery, setGallery] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -28,12 +29,15 @@ const ProviderPortfolio = ({ defaultTab = "view", openUploadSignal = 0 }) => {
   }, [openUploadSignal])
 
   useEffect(() => {
-    if (!user?._id) return
+    if (!providerId) {
+      setLoading(false)
+      return
+    }
 
     const fetchGallery = async () => {
       try {
         setLoading(true)
-        const response = await api.get(`/gallery/provider/${user._id}`)
+        const response = await api.get(`/gallery/provider/${providerId}`)
         setGallery(response.data.gallery)
         setOfferings(Array.isArray(response.data.gallery?.offerings) ? response.data.gallery.offerings : [])
       } catch (err) {
@@ -45,7 +49,7 @@ const ProviderPortfolio = ({ defaultTab = "view", openUploadSignal = 0 }) => {
     }
 
     fetchGallery()
-  }, [user?._id])
+  }, [providerId])
 
   const handleUploadSuccess = (updatedGallery) => {
     setGallery(updatedGallery)
@@ -55,13 +59,17 @@ const ProviderPortfolio = ({ defaultTab = "view", openUploadSignal = 0 }) => {
   }
 
   const handleDeleteItem = async (itemId) => {
+    if (!providerId) {
+      setToastMessage("Profil prestataire introuvable.")
+      return
+    }
     if (!window.confirm("Êtes-vous sûr de vouloir supprimer cet aperçu ?")) return
 
     try {
       await api.delete(`/gallery/${user._id}/item/${itemId}`)
       setToastMessage("Photo supprimée avec succès")
       // Refetch gallery
-      const response = await api.get(`/gallery/provider/${user._id}`)
+      const response = await api.get(`/gallery/provider/${providerId}`)
       setGallery(response.data.gallery)
       setOfferings(Array.isArray(response.data.gallery?.offerings) ? response.data.gallery.offerings : [])
     } catch (err) {
@@ -87,6 +95,10 @@ const ProviderPortfolio = ({ defaultTab = "view", openUploadSignal = 0 }) => {
   }
 
   const saveOfferings = async () => {
+    if (!providerId) {
+      setToastMessage("Profil prestataire introuvable.")
+      return
+    }
     try {
       setSavingOfferings(true)
       const payload = offerings.map((item) => ({
@@ -97,7 +109,7 @@ const ProviderPortfolio = ({ defaultTab = "view", openUploadSignal = 0 }) => {
         currency: item.currency || "XOF",
         unit: item.unit || "service"
       }))
-      const response = await api.put(`/gallery/${user._id}/offerings`, { offerings: payload })
+      const response = await api.put(`/gallery/${providerId}/offerings`, { offerings: payload })
       setGallery(response.data.gallery)
       setOfferings(Array.isArray(response.data.gallery?.offerings) ? response.data.gallery.offerings : [])
       setToastMessage("Tarifs mis à jour.")
@@ -276,7 +288,7 @@ const ProviderPortfolio = ({ defaultTab = "view", openUploadSignal = 0 }) => {
           )}
         </div>
       ) : (
-        <GalleryUploader providerId={user._id} onUploadSuccess={handleUploadSuccess} />
+        <GalleryUploader providerId={providerId} onUploadSuccess={handleUploadSuccess} />
       )}
 
       {toastMessage && <Toast message={toastMessage} onClose={() => setToastMessage(null)} />}

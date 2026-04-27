@@ -19,6 +19,22 @@ const SecuritySupport = () => {
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
 
+  const fetchTickets = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await supportAPI.fetchTickets()
+      // Filtrer uniquement les tickets de sécurité pour les non-admins
+      const allTickets = response.data || []
+      const securityTickets = allTickets.filter(t => t.category === 'security')
+      setTickets(securityTickets)
+    } catch (err) {
+      setError(err.response?.data?.message || 'Impossible de charger les tickets.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
   const sendShakeDangerAlert = useCallback(async () => {
     try {
       setSendingShakeAlert(true)
@@ -39,22 +55,6 @@ const SecuritySupport = () => {
   }, [fetchTickets])
 
   const { shakeDetected, countdown, clearShake, confirmShake } = useShakeDetection(sendShakeDangerAlert)
-
-  const fetchTickets = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const response = await supportAPI.fetchTickets()
-      // Filtrer uniquement les tickets de sécurité pour les non-admins
-      const allTickets = response.data || []
-      const securityTickets = allTickets.filter(t => t.category === 'security')
-      setTickets(securityTickets)
-    } catch (err) {
-      setError(err.response?.data?.message || 'Impossible de charger les tickets.')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
 
   const createTicket = async () => {
     if (!subject.trim() || !message.trim()) {
@@ -148,7 +148,7 @@ const SecuritySupport = () => {
           <div className="mt-4 rounded-2xl bg-white p-4">
             <h3 className="font-semibold text-[#a54b55]">Mode sécurité par secousse</h3>
             <p className="mt-1 text-sm text-[#5f7184]">
-              Comme sur Yango: secouez fortement le téléphone 3 fois. Une fenêtre d'urgence apparaît et vous pouvez cliquer pour confirmer le danger.
+              Secouez fortement le téléphone 3 fois. Une fenêtre d'urgence apparaît et vous pouvez cliquer pour confirmer le danger.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <button

@@ -36,6 +36,10 @@ const GalleryUploader = ({ providerId, onUploadSuccess }) => {
   }
 
   const uploadSingle = async () => {
+    if (!providerId) {
+      setError("Identifiant prestataire introuvable. Reconnectez-vous puis réessayez.")
+      return
+    }
     if (!uploadedItems.length) {
       setError("Veuillez sélectionner un média")
       return
@@ -84,6 +88,10 @@ const GalleryUploader = ({ providerId, onUploadSuccess }) => {
   }
 
   const uploadBeforeAfter = async () => {
+    if (!providerId) {
+      setError("Identifiant prestataire introuvable. Reconnectez-vous puis réessayez.")
+      return
+    }
     if (uploadedItems.length < 2) {
       setError("Veuillez sélectionner deux images (avant et après)")
       return

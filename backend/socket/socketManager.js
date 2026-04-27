@@ -5,6 +5,36 @@ const User = require('../models/User');
 const Ride = require('../models/Ride');
 const { validateLocation } = require('../utils/locationValidation');
 
+const normalizeOrigin = (value) => String(value || '').trim().replace(/\/+$/, '');
+
+const buildAllowedOrigins = () => {
+  const raw = String(process.env.FRONTEND_URL || '');
+  return raw
+    .split(',')
+    .map((origin) => normalizeOrigin(origin))
+    .filter(Boolean);
+};
+
+const isOriginAllowed = (origin, allowedOrigins) => {
+  if (!origin) return true; // mobile/webviews or non-browser clients
+  const normalizedOrigin = normalizeOrigin(origin);
+
+  if (allowedOrigins.length === 0) {
+    return true;
+  }
+
+  return allowedOrigins.some((allowed) => {
+    if (allowed.includes('*')) {
+      const regexPattern = `^${allowed
+        .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+        .replace(/\\\*/g, '.*')}$`;
+      return new RegExp(regexPattern, 'i').test(normalizedOrigin);
+    }
+
+    return normalizedOrigin.toLowerCase() === allowed.toLowerCase();
+  });
+};
+
 class SocketManager {
   constructor() {
     this.io = null;
@@ -14,9 +44,17 @@ class SocketManager {
   }
 
   initialize(server) {
+    const allowedOrigins = buildAllowedOrigins();
+
     this.io = socketIo(server, {
       cors: {
-        origin: process.env.FRONTEND_URL || "http://localhost:3000",
+        origin: (origin, callback) => {
+          if (isOriginAllowed(origin, allowedOrigins)) {
+            callback(null, true);
+            return;
+          }
+          callback(new Error(`Socket origin not allowed: ${origin}`));
+        },
         methods: ["GET", "POST"]
       }
     });

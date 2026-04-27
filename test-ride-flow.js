@@ -7,6 +7,10 @@ const http = require('http');
 const https = require('https');
 
 const API_BASE = 'http://localhost:5000/api';
+const CLIENT_EMAIL = process.env.TEST_CLIENT_EMAIL || 'fatou.client@yoonbi.sn';
+const CLIENT_PASSWORD = process.env.TEST_CLIENT_PASSWORD || 'ClientTest123!';
+const DRIVER_EMAIL = process.env.TEST_DRIVER_EMAIL || 'moussa.driver@yoonbi.sn';
+const DRIVER_PASSWORD = process.env.TEST_DRIVER_PASSWORD || 'DriverTest123!';
 
 // Couleurs pour le terminal
 const colors = {
@@ -70,11 +74,12 @@ const testFlow = async () => {
     // Step 1: Login client
     log.step('1. Authentification CLIENT...');
     let res = await request('POST', '/auth/login', {
-      email: 'client.test@yoonwi.sn',
-      password: 'ClientTest123!'
+      email: CLIENT_EMAIL,
+      password: CLIENT_PASSWORD
     });
     if (res.status !== 200) {
       log.error(`Login client échoué (${res.status})`);
+      if (res?.data?.message) log.info(`Détail: ${res.data.message}`);
       return;
     }
     const clientToken = res.data.token;
@@ -84,11 +89,13 @@ const testFlow = async () => {
     // Step 2: Login driver
     log.step('2. Authentification CHAUFFEUR...');
     res = await request('POST', '/auth/login', {
-      email: 'driver.test@yoonwi.sn',
-      password: 'DriverTest123!'
+      email: DRIVER_EMAIL,
+      password: DRIVER_PASSWORD
     });
     if (res.status !== 200) {
       log.error(`Login driver échoué (${res.status})`);
+      if (res?.data?.message) log.info(`Détail: ${res.data.message}`);
+      log.warning('Pré-requis: compte chauffeur existant et statut "verified".');
       return;
     }
     const driverToken = res.data.token;

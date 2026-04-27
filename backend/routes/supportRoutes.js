@@ -28,20 +28,24 @@ router.post('/ticket', authMiddleware, async (req, res) => {
 
     await ticket.save()
 
-    await createNotification({
-      userId: req.user._id,
-      title: 'Ticket support créé',
-      message: 'Votre demande de support a bien été prise en compte. Nous revenons vers vous rapidement.',
-      category: 'info',
-      link: '/support'
-    })
+    try {
+      await createNotification({
+        userId: req.user._id,
+        title: 'Ticket support créé',
+        message: 'Votre demande de support a bien été prise en compte. Nous revenons vers vous rapidement.',
+        category: 'info',
+        link: '/support'
+      })
 
-    await notifyAdmins({
-      title: 'Nouveau ticket support',
-      message: `Un nouveau ticket a été soumis par ${req.user.firstName || req.user.name || 'un utilisateur'}.`,
-      category: 'info',
-      link: '/support'
-    })
+      await notifyAdmins({
+        title: 'Nouveau ticket support',
+        message: `Un nouveau ticket a été soumis par ${req.user.firstName || req.user.name || 'un utilisateur'}.`,
+        category: 'info',
+        link: '/support'
+      })
+    } catch (notificationError) {
+      console.error('Erreur notifications ticket support:', notificationError)
+    }
 
     return res.json({ success: true, ticket })
   } catch (err) {
@@ -102,13 +106,17 @@ router.post('/tickets/:id/respond', authMiddleware, async (req, res) => {
     await ticket.save()
 
     if (!ticket.userId.equals(req.user._id)) {
-      await createNotification({
-        userId: ticket.userId,
-        title: 'Réponse à votre ticket',
-        message: 'Une réponse a été ajoutée à votre demande de support. Consultez la conversation.',
-        category: 'info',
-        link: '/support'
-      })
+      try {
+        await createNotification({
+          userId: ticket.userId,
+          title: 'Réponse à votre ticket',
+          message: 'Une réponse a été ajoutée à votre demande de support. Consultez la conversation.',
+          category: 'info',
+          link: '/support'
+        })
+      } catch (notificationError) {
+        console.error('Erreur notification reponse support:', notificationError)
+      }
     }
 
     return res.json({ success: true, ticket })

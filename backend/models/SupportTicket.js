@@ -3,7 +3,7 @@ const mongoose = require('mongoose')
 const ticketMessageSchema = new mongoose.Schema(
   {
     senderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    senderRole: { type: String, enum: ['client', 'driver', 'technician', 'admin'], required: true },
+    senderRole: { type: String, enum: ['client', 'driver', 'technician', 'server', 'admin'], required: true },
     message: { type: String, required: true },
     createdAt: { type: Date, default: () => new Date() }
   },

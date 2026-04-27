@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react"
+import { resolveMediaUrl } from "../utils/mediaUrl"
 
 const VehicleCard = ({ vehicle, onSelect, showProviderInfo = false }) => {
   const [providerInfo, setProviderInfo] = useState(null)
@@ -26,7 +27,7 @@ const VehicleCard = ({ vehicle, onSelect, showProviderInfo = false }) => {
     >
       {/* Image */}
       <div className="relative h-48 bg-gray-200 overflow-hidden">
-        <img src={vehicle.photoUrl} alt={vehicle.vehicleName} className="w-full h-full object-cover" />
+        <img src={resolveMediaUrl(vehicle.photoUrl)} alt={vehicle.vehicleName} className="w-full h-full object-cover" />
         <div className="absolute top-2 right-2 bg-white rounded-full px-3 py-1 text-sm font-semibold shadow">
           {vehicleTypeLabel}
         </div>
@@ -75,7 +76,7 @@ const VehicleCard = ({ vehicle, onSelect, showProviderInfo = false }) => {
         {showProviderInfo && providerInfo && (
           <div className="flex items-center gap-2 pt-2 border-t">
             {providerInfo.profilePhotoUrl && (
-              <img src={providerInfo.profilePhotoUrl} alt={providerInfo.name} className="w-8 h-8 rounded-full" />
+              <img src={resolveMediaUrl(providerInfo.profilePhotoUrl)} alt={providerInfo.name} className="w-8 h-8 rounded-full" />
             )}
             <div className="flex-1">
               <p className="font-semibold text-sm">{providerInfo.name}</p>

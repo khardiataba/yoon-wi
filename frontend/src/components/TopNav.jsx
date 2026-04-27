@@ -1,15 +1,8 @@
 import { useNavigate, useLocation } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
+import { resolveMediaUrl } from "../utils/mediaUrl"
 
 const APP_NAME = "YOONWI"
-
-const resolveAssetUrl = (path) => {
-  if (!path) return ""
-  if (String(path).startsWith("http") || String(path).startsWith("data:")) return path
-  const protocol = window.location.protocol || "http:"
-  const host = window.location.hostname || "localhost"
-  return `${protocol}//${host}:5000${path}`
-}
 
 const getUserDisplayName = (user) => user?.firstName || user?.name?.split(" ")[0] || "Compte"
 
@@ -17,7 +10,7 @@ const TopNav = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { user } = useAuth()
-  const photoUrl = resolveAssetUrl(user?.profilePhotoUrl || user?.profileImage)
+  const photoUrl = resolveMediaUrl(user?.profilePhotoUrl || user?.profileImage)
 
   // Fonction pour aller en arrière
   const goBack = () => {

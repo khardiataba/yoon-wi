@@ -38,6 +38,31 @@ const pickupIcon = createMapIcon("pin", "#165c96")
 const destinationIcon = createMapIcon("flag", "#18c56e")
 const carIcon = createMapIcon("car", "#d7ae49")
 
+const reverseGeocodeLocation = async (lat, lng) => {
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`
+    const response = await fetch(url, {
+      headers: {
+        Accept: "application/json"
+      }
+    })
+    if (!response.ok) {
+      throw new Error(`Reverse geocoding failed with status ${response.status}`)
+    }
+    const data = await response.json()
+    const address = String(data?.display_name || "").trim()
+    return {
+      name: address || `Point GPS ${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`,
+      address: address || ""
+    }
+  } catch {
+    return {
+      name: `Point GPS ${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`,
+      address: ""
+    }
+  }
+}
+
 const ChangeView = ({ center, pickup, destination, routeGeometry }) => {
   const map = useMap()
 
@@ -71,7 +96,12 @@ const LocationMarker = ({ onSelect, disabled }) => {
     async click(event) {
       if (disabled || !onSelect) return
       const { lat, lng } = event.latlng
-      onSelect({ lat, lng })
+      const geocoded = await reverseGeocodeLocation(lat, lng)
+      onSelect({
+        lat,
+        lng,
+        ...geocoded
+      })
     }
   })
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from "react"
 import api from "../api"
-import { useLocation, useNavigate } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import MapPicker from "../components/MapPicker"
 import useShakeDetection from "../hooks/useShakeDetection"
@@ -135,7 +135,6 @@ const resolveVariant = (serviceCategory) => {
 
 const TechnicianDashboard = ({ variant: forcedVariant }) => {
   const navigate = useNavigate()
-  const location = useLocation()
   const { user, fetchProfile } = useAuth()
   const variant = forcedVariant || resolveVariant(user?.providerDetails?.serviceCategory)
   const theme = dashboardThemes[variant] || dashboardThemes.other
@@ -148,6 +147,7 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
   const [sendingSOS, setSendingSOS] = useState(false)
   const [busyRequestId, setBusyRequestId] = useState(null)
   const [settlingRequestId, setSettlingRequestId] = useState(null)
+  const [closeFlowById, setCloseFlowById] = useState({})
   const [paymentDraftById, setPaymentDraftById] = useState({})
   const [safetyDraftById, setSafetyDraftById] = useState({})
   const [quoteDraftById, setQuoteDraftById] = useState({})
@@ -193,7 +193,6 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
       [requestId]: {
         paymentMethod: "Wave",
         reference: "",
-        amountPaid: "",
         ...(current[requestId] || {}),
         [field]: value
       }
@@ -206,9 +205,15 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
       [request._id]: {
         paymentMethod: "Wave",
         reference: `COMM-${String(request._id || "").slice(-6)}`,
-        amountPaid: String(Number(request.appCommissionAmount) || 0),
         ...(current[request._id] || {})
       }
+    }))
+  }
+
+  const toggleCloseFlow = (requestId) => {
+    setCloseFlowById((current) => ({
+      ...current,
+      [requestId]: !current[requestId]
     }))
   }
 
@@ -262,7 +267,7 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
         lat: Number(location.lat),
         lng: Number(location.lng)
       },
-      locationLabel: current.locationLabel || current.serviceArea || "Localisation partagee"
+      locationLabel: location.address || location.name || current.locationLabel || current.serviceArea || "Localisation partagee"
     }))
     setLocationError(null)
   }
@@ -413,21 +418,16 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
       setActionMessage(null)
       setError(null)
 
-      if (request.status === "accepted") {
-        const safetyDraft = safetyDraftById[request._id] || {}
-        const safetyCode = String(safetyDraft.safetyCode || "").trim()
-        if (!safetyCode) {
-          throw new Error("Veuillez saisir le code de sécurité partagé par le client.")
-        }
-        await api.patch(`/services/${request._id}/start`, { safetyCode })
+      if (request.status !== "in_progress") {
+        throw new Error("La mission doit etre demarree avant la cloture.")
       }
 
       if (request.platformContributionStatus !== "paid") {
         const draft = paymentDraftById[request._id] || {}
         const paymentMethod = String(draft.paymentMethod || "").trim()
         const reference = String(draft.reference || "").trim()
-        const amountPaid = Number(draft.amountPaid)
         const expectedAmount = Number(request.appCommissionAmount) || 0
+        const amountPaid = expectedAmount
 
         const allowedPaymentMethods = ["Wave", "Orange Money", "Free Money", "Cash"]
         if (!allowedPaymentMethods.includes(paymentMethod)) {
@@ -438,16 +438,8 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
           throw new Error("La reference de paiement est obligatoire.")
         }
 
-        if (!Number.isFinite(amountPaid) || amountPaid < 0) {
-          throw new Error("Le montant de contribution est obligatoire.")
-        }
-
-        if (amountPaid > 1000000) {
-          throw new Error("Le montant de contribution semble invalide.")
-        }
-
-        if (expectedAmount > 0 && amountPaid !== expectedAmount) {
-          throw new Error(`Le montant saisi doit être exactement de ${expectedAmount} F.`)
+        if (!Number.isFinite(expectedAmount) || expectedAmount < 0) {
+          throw new Error("Le montant de contribution est invalide.")
         }
 
         await api.patch(`/services/${request._id}/confirm-payment`, {
@@ -459,40 +451,10 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
 
       await api.patch(`/services/${request._id}/complete`)
       setActionMessage("Contribution reglee et mission cloturee.")
+      setCloseFlowById((current) => ({ ...current, [request._id]: false }))
       fetchRequests()
     } catch (err) {
       setError(err.response?.data?.message || err.message || "Impossible de regler la contribution et cloturer")
-    } finally {
-      setSettlingRequestId(null)
-    }
-  }
-
-  const payOnlineRequest = async (request) => {
-    try {
-      setSettlingRequestId(request._id)
-      setActionMessage(null)
-      setError(null)
-
-      if (request.status === "accepted") {
-        const safetyDraft = safetyDraftById[request._id] || {}
-        const safetyCode = String(safetyDraft.safetyCode || "").trim()
-        if (!safetyCode) {
-          throw new Error("Veuillez saisir le code de sécurité partagé par le client.")
-        }
-        await api.patch(`/services/${request._id}/start`, { safetyCode })
-      }
-
-      const response = await api.post(`/services/${request._id}/online-payment-session`)
-      const checkoutUrl = response.data?.checkoutUrl
-      if (!checkoutUrl) {
-        setActionMessage("La contribution est déjà réglée.")
-        fetchRequests()
-        return
-      }
-
-      window.location.href = checkoutUrl
-    } catch (err) {
-      setError(err.response?.data?.message || err.message || "Impossible de lancer le paiement en ligne")
     } finally {
       setSettlingRequestId(null)
     }
@@ -512,18 +474,17 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
           req &&
           req._id &&
           req.platformContributionStatus !== "paid" &&
-          (req.status === "accepted" || req.status === "in_progress")
+          req.status === "in_progress"
 
         if (!eligible) continue
 
         const key = req._id
-        const hasExisting = Boolean(current[key]?.amountPaid || current[key]?.reference)
+        const hasExisting = Boolean(current[key]?.reference)
         if (hasExisting) continue
 
         next[key] = {
           paymentMethod: "Wave",
-          reference: `COMM-${String(req._id || "").slice(-6)}`,
-          amountPaid: String(Number(req.appCommissionAmount) || 0)
+          reference: `COMM-${String(req._id || "").slice(-6)}`
         }
         changed = true
       }
@@ -531,25 +492,6 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
       return changed ? next : current
     })
   }, [myRequests])
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search)
-    const paymentStatus = params.get("payment")
-    const requestId = params.get("serviceRequestId")
-
-    if (paymentStatus === "stripe_success") {
-      setActionMessage("Paiement en ligne reçu. La contribution sera visible sous peu.")
-      fetchRequests()
-    }
-
-    if (paymentStatus === "stripe_cancel") {
-      setActionMessage("Paiement annulé. Vous pouvez relancer la contribution quand vous voulez.")
-    }
-
-    if (requestId && paymentStatus) {
-      // On garde l'information dans l'URL, mais on ne force pas la clôture sans vérification du statut.
-    }
-  }, [location.search])
 
   const revenue = useMemo(() => {
     const now = new Date()
@@ -662,7 +604,7 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
               </div>
               <h2 className="mt-3 font-['Sora'] text-xl font-bold text-[#16324f]">Mettre a jour ma position</h2>
               <p className="mt-2 text-sm text-[#5a8fd1]">
-                Les clients verront votre zone et votre position approximative pour choisir le prestataire le plus proche ou le plus qualifie.
+                Les clients verront votre zone et votre position avec adresse exacte pour choisir le prestataire le plus proche.
               </p>
 
               <div className="mt-4 space-y-3">
@@ -682,7 +624,7 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
 
                 <div className="rounded-[22px] bg-[#f8fbff] px-4 py-4 text-sm text-[#5f7184]">
                   {locationDraft.coordinates
-                    ? `Position actuelle: ${locationDraft.coordinates.lat.toFixed(4)}, ${locationDraft.coordinates.lng.toFixed(4)}`
+                    ? `Position actuelle: ${locationDraft.locationLabel || `${locationDraft.coordinates.lat.toFixed(5)}, ${locationDraft.coordinates.lng.toFixed(5)}`}`
                     : "Cliquez sur la carte pour partager votre position exacte."}
                 </div>
 
@@ -891,12 +833,33 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
                         </div>
                       )}
 
-                      {req.platformContributionStatus !== "paid" && (req.status === "accepted" || req.status === "in_progress") && (
-                          <div className="mt-4 rounded-[22px] bg-[linear-gradient(180deg,#f8fbff_0%,#f3f8fc_100%)] p-4">
+                      {req.status === "in_progress" && req.platformContributionStatus !== "paid" && !closeFlowById[req._id] && (
+                        <div className="mt-4 flex flex-wrap gap-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              fillPaymentDraft(req)
+                              toggleCloseFlow(req._id)
+                            }}
+                            className="rounded-2xl bg-[linear-gradient(135deg,#1260a1_0%,#0a3760_100%)] px-4 py-3 text-sm font-bold text-white"
+                          >
+                            Cloturer la mission
+                          </button>
+                          <span className="rounded-2xl bg-[#fff7eb] px-4 py-3 text-xs font-semibold text-[#8b6d2f]">
+                            Contribution a regler avant cloture.
+                          </span>
+                        </div>
+                      )}
+
+                      {req.status === "in_progress" && req.platformContributionStatus !== "paid" && closeFlowById[req._id] && (
+                        <div className="mt-4 rounded-[22px] bg-[linear-gradient(180deg,#f8fbff_0%,#f3f8fc_100%)] p-4">
                           <div className="mb-3 rounded-2xl border border-[#dce7f0] bg-white px-4 py-3">
-                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5a8fd1]">Paiement commission</div>
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5a8fd1]">Paiement contribution</div>
                             <div className="mt-1 font-['Sora'] text-lg font-bold text-[#16324f]">{COMMISSION_PAYMENT_NUMBER}</div>
-                            <div className="mt-2 flex flex-wrap gap-2">
+                            <div className="mt-2 text-sm text-[#5f7184]">
+                              Payez d'abord la contribution de <span className="font-semibold">{Number(req.appCommissionAmount || 0).toLocaleString()} F</span> sur ce numero, puis validez ci-dessous.
+                            </div>
+                            <div className="mt-2">
                               <button
                                 type="button"
                                 onClick={copyCommissionNumber}
@@ -904,16 +867,9 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
                               >
                                 Copier le numero
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => fillPaymentDraft(req)}
-                                className="rounded-xl bg-[#fff7eb] px-3 py-2 text-xs font-bold text-[#8b6d2f]"
-                              >
-                                Pre-remplir montant
-                              </button>
                             </div>
                           </div>
-                          <div className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
+                          <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
                             <div>
                               <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5a8fd1]">Mode de paiement</label>
                               <select
@@ -927,7 +883,7 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
                               </select>
                             </div>
                             <div>
-                              <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5a8fd1]">Reference</label>
+                              <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5a8fd1]">Reference du paiement</label>
                               <input
                                 value={paymentDraftById[req._id]?.reference || ""}
                                 onChange={(event) => updatePaymentDraft(req._id, "reference", event.target.value)}
@@ -935,43 +891,23 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
                                 className="w-full rounded-2xl border border-[#dce7f0] bg-white px-4 py-3 text-sm outline-none focus:border-[#1260a1]"
                               />
                             </div>
-                            <div>
-                              <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5a8fd1]">Montant contribution</label>
-                              <input
-                                value={paymentDraftById[req._id]?.amountPaid || ""}
-                                onChange={(event) => updatePaymentDraft(req._id, "amountPaid", event.target.value)}
-                                type="number"
-                                inputMode="numeric"
-                                min="0"
-                                step="1"
-                                placeholder={String(req.appCommissionAmount || 0)}
-                                className="w-full rounded-2xl border border-[#dce7f0] bg-white px-4 py-3 text-sm outline-none focus:border-[#1260a1]"
-                              />
-                            </div>
                             <button
                               type="button"
-                              onClick={() => payOnlineRequest(req)}
+                              onClick={() => settleAndCompleteRequest(req)}
                               disabled={settlingRequestId === req._id}
                               className="rounded-2xl bg-[linear-gradient(135deg,#18c56e_0%,#12804a_100%)] px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-70"
                             >
-                              {settlingRequestId === req._id ? "Ouverture..." : "Payer en ligne"}
+                              {settlingRequestId === req._id ? "Validation..." : "Valider contribution et cloturer"}
                             </button>
                           </div>
                           <div className="mt-3">
                             <button
                               type="button"
-                              onClick={() => settleAndCompleteRequest(req)}
-                              disabled={settlingRequestId === req._id}
-                              className="rounded-2xl border border-[#dce7f0] bg-white px-4 py-3 text-sm font-bold text-[#1260a1] disabled:cursor-not-allowed disabled:opacity-70"
+                              onClick={() => toggleCloseFlow(req._id)}
+                              className="rounded-2xl border border-[#dce7f0] bg-white px-4 py-2 text-xs font-bold text-[#1260a1]"
                             >
-                              Paiement manuel et cloture
+                              Annuler
                             </button>
-                          </div>
-                          <div className="mt-3 text-xs text-[#5f7184]">
-                            Le montant attendu est {Number(req.appCommissionAmount || 0).toLocaleString()} F. Le paiement en ligne confirme la contribution avant la cloture.
-                          </div>
-                          <div className="mt-3 text-xs text-[#5f7184]">
-                            Si Stripe n'est pas configure sur le serveur, utilisez la saisie manuelle ci-dessous comme solution de secours.
                           </div>
                         </div>
                       )}

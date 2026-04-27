@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom"
 import api from "../api"
 import MapPicker from "../components/MapPicker"
 import AppIcon from "../components/AppIcon"
+import { resolveMediaUrl } from "../utils/mediaUrl"
 
 const categories = [
   { value: "menuisier", label: "Menuiserie", icon: "tools", hint: "Portes, meubles, dressing", family: "artisan" },
@@ -59,15 +60,9 @@ const formatArrival = (minutes) => {
   return `${minutes} min approx.`
 }
 
-const getAssetUrl = (path) => {
-  if (!path) return ""
-  const base = String(api.defaults.baseURL || "").replace(/\/api\/?$/, "")
-  return `${base}${path}`
-}
-
 const getProviderImageUrl = (provider) => {
   const source = provider?.profilePhotoUrl || provider?.portfolio?.coverImage || provider?.portfolio?.previewItems?.[0]?.thumbnailUrl || provider?.portfolio?.previewItems?.[0]?.imageUrl || ""
-  return source ? getAssetUrl(source) : ""
+  return resolveMediaUrl(source)
 }
 
 const formatPriceRange = (startingPrice, maxPrice, currency = "XOF", unit = "service") => {
@@ -621,7 +616,7 @@ const Service = () => {
                                   <div key={item.id} className="overflow-hidden rounded-[16px] border border-[#dce7f0] bg-[#edf5fb]">
                                     {item.mediaType === "video" && item.videoUrl ? (
                                       <video
-                                        src={getAssetUrl(item.videoUrl)}
+                                        src={resolveMediaUrl(item.videoUrl)}
                                         className="h-20 w-full object-cover"
                                         muted
                                         playsInline
@@ -629,7 +624,7 @@ const Service = () => {
                                       />
                                     ) : (
                                       <img
-                                        src={getAssetUrl(item.thumbnailUrl || item.imageUrl)}
+                                        src={resolveMediaUrl(item.thumbnailUrl || item.imageUrl)}
                                         alt={item.title || provider.name}
                                         className="h-20 w-full object-cover"
                                       />
