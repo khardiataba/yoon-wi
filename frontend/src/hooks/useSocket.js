@@ -17,10 +17,10 @@ const getDefaultSocketUrl = () => {
       return `${protocol}//${hostname}:5000`;
     }
 
-    if (String(hostname).toLowerCase().includes('vercel.app') && DEPLOY_FALLBACK_BACKEND) {
+    if (DEPLOY_FALLBACK_BACKEND) {
       console.warn(
-        `VITE_SOCKET_URL is not set on Vercel. Falling back to ${DEPLOY_FALLBACK_BACKEND}. ` +
-        'Set VITE_SOCKET_URL in Vercel env to remove this fallback.'
+        `VITE_SOCKET_URL is not set. Falling back to ${DEPLOY_FALLBACK_BACKEND}. ` +
+        'Set VITE_SOCKET_URL in frontend env to use your own backend URL.'
       );
       return DEPLOY_FALLBACK_BACKEND;
     }

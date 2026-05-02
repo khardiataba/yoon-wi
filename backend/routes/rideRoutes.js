@@ -241,6 +241,11 @@ router.post("/", authMiddleware, requireVerified, async (req, res) => {
       marche: "Bus Eleves - Jusqu'au marche",
       ville: "Bus Eleves - Ville"
     }
+    const availableDrivers = socketManager.findAvailableDrivers(
+      { latitude: locationValidation.pickup.lat, longitude: locationValidation.pickup.lng },
+      null
+    )
+    const driverAvailabilityStatus = availableDrivers.length > 0 ? "searching" : "no_driver_available"
 
     const ride = await Ride.create({
       userId: req.user._id,
@@ -257,7 +262,8 @@ router.post("/", authMiddleware, requireVerified, async (req, res) => {
       paymentMethod: paymentMethod || "Cash",
       routeGeometry: normalizeRouteGeometry(routeGeometry),
       safetyCode,
-      status: "pending"
+      status: "pending",
+      driverAvailabilityStatus
     })
 
     return res.status(201).json({
@@ -474,6 +480,7 @@ router.patch(
 
       ride.status = "accepted"
       ride.driverId = req.user._id
+      ride.driverAvailabilityStatus = "driver_assigned"
       await ride.save()
 
       await createNotification({

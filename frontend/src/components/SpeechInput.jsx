@@ -75,8 +75,8 @@ export default function SpeechInput({
           onChange={handleInputChange}
           placeholder={placeholder}
           disabled={disabled}
-          className={`flex-1 outline-none ${bgClass} transparent ${textClass} ${placeholderClass} text-sm min-w-[150px]`}
-          style={{ background: 'transparent' }}
+          className={`flex-1 outline-none ${bgClass} ${textClass} ${placeholderClass} text-sm min-w-[150px]`}
+          style={{ background: 'transparent', color: isDark ? '#ffffff' : '#1f2937' }}
           onKeyPress={(e) => {
             if (e.key === 'Enter') {
               handleSubmit()

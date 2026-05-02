@@ -30,10 +30,15 @@ const getDefaultApiBase = () => {
       return `${protocol}//${hostname}:5000/api`
     }
 
-    if (String(hostname).toLowerCase().includes("vercel.app") && DEPLOY_FALLBACK_BACKEND) {
+    const looksLikeLanHost = /^(\d{1,3}\.){3}\d{1,3}$/.test(String(hostname || ""))
+    if (looksLikeLanHost) {
+      return `${protocol}//${hostname}:5000/api`
+    }
+
+    if (DEPLOY_FALLBACK_BACKEND) {
       console.warn(
-        `VITE_API_URL is not set on Vercel. Falling back to ${DEPLOY_FALLBACK_BACKEND}/api. ` +
-        "Set VITE_API_URL in Vercel env to remove this fallback."
+        `VITE_API_URL is not set. Falling back to ${DEPLOY_FALLBACK_BACKEND}/api. ` +
+        "Set VITE_API_URL in frontend env to use your own backend URL."
       )
       return `${DEPLOY_FALLBACK_BACKEND}/api`
     }

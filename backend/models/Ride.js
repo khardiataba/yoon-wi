@@ -69,6 +69,11 @@ const rideSchema = new mongoose.Schema({
     enum: ["pending", "accepted", "ongoing", "completed", "cancelled"],
     default: "pending"
   },
+  driverAvailabilityStatus: {
+    type: String,
+    enum: ["searching", "no_driver_available", "driver_assigned"],
+    default: "searching"
+  },
   price: { type: Number, required: true },
   appCommissionPercent: { type: Number, default: 10 },
   appCommissionAmount: { type: Number, default: 0 },

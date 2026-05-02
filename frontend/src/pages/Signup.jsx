@@ -355,7 +355,7 @@ const Signup = () => {
           <div className="mt-4 font-['Sora'] text-[40px] font-extrabold text-white">
             YOON WI
           </div>
-          <p className="ndar-hero-copy mt-3 text-sm">
+          <p className="mt-3 text-sm text-[#f7fbff]">
             Parcours d'inscription pour {draft.firstName} {draft.lastName} ({roleLabel}).
           </p>
         </div>

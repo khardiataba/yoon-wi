@@ -14,11 +14,21 @@ const normalizePlace = (result) => ({
 
 const searchPlaces = async (query) => {
   try {
-    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&countrycodes=sn&viewbox=${SAINT_LOUIS_VIEWBOX}&bounded=1&q=${encodeURIComponent(query)}`
-    const response = await fetch(url, { headers: { "User-Agent": "yoonbi" } })
-    if (!response.ok) throw new Error("Recherche indisponible")
-    const results = await response.json()
-    return results.map(normalizePlace)
+    const mapsRes = await api.get("/maps/places", {
+      params: {
+        query,
+        lat: 16.0244,
+        lng: -16.5015,
+        radius: 12000
+      }
+    })
+    const places = Array.isArray(mapsRes.data?.places) ? mapsRes.data.places : []
+    return places.slice(0, 6).map((place) => ({
+      name: place.name || "Lieu",
+      address: place.address || place.name || "Adresse indisponible",
+      lat: Number(place.location?.lat),
+      lng: Number(place.location?.lng)
+    })).filter((item) => Number.isFinite(item.lat) && Number.isFinite(item.lng))
   } catch (error) {
     console.error("Erreur de recherche d'adresse:", error)
     return []
@@ -27,15 +37,16 @@ const searchPlaces = async (query) => {
 
 const reverseGeocode = async ({ lat, lng }) => {
   try {
-    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
-    const response = await fetch(url, { headers: { "User-Agent": "yoonbi" } })
-    if (!response.ok) throw new Error("Adresse indisponible")
-    const result = await response.json()
+    const response = await api.get("/maps/reverse-geocode", { params: { lat, lng } })
+    const address = response.data?.address
+    const displayAddress = typeof address === "string" && address.trim().length > 0
+      ? address
+      : `${lat.toFixed(5)}, ${lng.toFixed(5)}`
     return {
       lat,
       lng,
-      name: result.name || result.address?.road || result.display_name.split(",")[0] || "Point selectionne",
-      address: result.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+      name: displayAddress.split(",")[0] || "Point selectionne",
+      address: displayAddress
     }
   } catch (error) {
     console.error("Erreur de reverse geocoding:", error)

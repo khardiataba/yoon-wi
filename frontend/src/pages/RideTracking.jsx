@@ -150,6 +150,9 @@ const RideTracking = () => {
   const ridePrice = ride?.price ? `${ride.price.toLocaleString()} FCFA` : "Tarif calcule"
   const safetyCode = ride?.safetyCode ? String(ride.safetyCode) : "----"
   const rideIdentifier = ride?._id || ride?.rideId || ride?.id || null
+  const hasDriver = Boolean(ride?.driverId || ride?.driver?._id)
+  const isSearchingDriver = !hasDriver && ride?.driverAvailabilityStatus === "searching"
+  const noDriverAvailable = !hasDriver && ride?.driverAvailabilityStatus === "no_driver_available"
 
   const copySafetyCode = async () => {
     try {
@@ -234,6 +237,15 @@ Code PIN: ${safetyCode}`
         </header>
 
         <section className="ndar-card rounded-[32px] p-5">
+          <div className={`mb-4 rounded-2xl px-4 py-3 text-sm font-semibold ${
+            noDriverAvailable ? "bg-[#fff1f1] text-[#a54b55]" : "bg-[#edf5fb] text-[#165c96]"
+          }`}>
+            {hasDriver
+              ? "Chauffeur disponible: un chauffeur a accepte votre course."
+              : noDriverAvailable
+                ? "Aucun chauffeur disponible dans cet endroit pour le moment."
+                : "Recherche de chauffeur en cours..."}
+          </div>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="ndar-chip">Sécurité</div>

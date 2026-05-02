@@ -116,13 +116,7 @@ const verifyOcrDocument = async (documentKey, file) => {
   if (!file) return null
 
   if (file.mimetype === "application/pdf") {
-    if (documentKey === "license" || documentKey === "registrationCard") {
-      if ((file.size || 0) < 25 * 1024) {
-        return buildCheck("rejected", `${documentRules[documentKey].label}: fichier trop petit ou peu lisible.`)
-      }
-      return buildCheck("valid", `${documentRules[documentKey].label}: fichier recu et accepte automatiquement.`)
-    }
-    return buildCheck("rejected", `${documentRules[documentKey].label}: envoyez une photo/image pour la verification automatique.`)
+    return buildCheck("rejected", `${documentRules[documentKey].label}: format PDF refuse pour verification d'authenticite automatique. Envoyez une photo nette.`)
   }
 
   if (!(file.mimetype || "").startsWith("image/")) {
@@ -150,16 +144,16 @@ const verifyOcrDocument = async (documentKey, file) => {
       return buildCheck("valid", `${rule.label}: verification automatique acceptable.`)
     }
 
-    if (documentKey === "idCardBack") {
-      return buildCheck("valid", `${rule.label}: acceptee automatiquement apres controle de presence et de qualite minimale.`)
-    }
-
     if ((documentKey === "license" || documentKey === "registrationCard") && matchCount >= 1) {
       return buildCheck("valid", `${rule.label}: verification automatique acceptable.`)
     }
 
+    if (documentKey === "idCardBack") {
+      return buildCheck("rejected", `${rule.label}: document non reconnu automatiquement. Merci de reprendre une photo plus nette.`)
+    }
+
     if (documentKey === "license" || documentKey === "registrationCard") {
-      return buildCheck("valid", `${rule.label}: acceptee automatiquement apres controle de presence et de qualite minimale.`)
+      return buildCheck("rejected", `${rule.label}: document non reconnu automatiquement. Merci de reprendre une photo plus nette.`)
     }
 
     if (matchCount >= rule.minimumMatches) {
@@ -169,12 +163,6 @@ const verifyOcrDocument = async (documentKey, file) => {
     return buildCheck("rejected", `${rule.label}: document non reconnu automatiquement. Merci de reprendre une photo plus nette.`)
   } catch (error) {
     console.error(`OCR impossible pour ${documentKey}:`, error.message)
-    if (documentKey === "idCardBack") {
-      return buildCheck("valid", `${documentRules[documentKey].label}: acceptee automatiquement malgre une lecture OCR difficile.`)
-    }
-    if (documentKey === "license" || documentKey === "registrationCard") {
-      return buildCheck("valid", `${documentRules[documentKey].label}: acceptee automatiquement malgre une lecture OCR difficile.`)
-    }
     return buildCheck("rejected", `${documentRules[documentKey].label}: analyse automatique impossible. Reprenez la photo.`)
   }
 }

@@ -28,6 +28,33 @@ const server = http.createServer(app)
 // Initialize Socket.io
 socketManager.initialize(server)
 
+const normalizeOrigin = (value) => String(value || "").trim().replace(/\/+$/, "")
+const buildAllowedOrigins = () =>
+  String(process.env.FRONTEND_URL || "")
+    .split(",")
+    .map((origin) => normalizeOrigin(origin))
+    .filter(Boolean)
+
+const isOriginAllowed = (origin, allowedOrigins) => {
+  if (!origin) return true
+  const normalizedOrigin = normalizeOrigin(origin)
+
+  if (allowedOrigins.length === 0) {
+    return true
+  }
+
+  return allowedOrigins.some((allowed) => {
+    if (allowed.includes("*")) {
+      const regexPattern = `^${allowed
+        .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
+        .replace(/\\\*/g, ".*")}$`
+      return new RegExp(regexPattern, "i").test(normalizedOrigin)
+    }
+
+    return normalizedOrigin.toLowerCase() === allowed.toLowerCase()
+  })
+}
+
 // Security Headers
 app.use(helmet())
 
@@ -56,7 +83,18 @@ const generalLimiter = rateLimit({
   legacyHeaders: false,
 })
 
-app.use(cors())
+const allowedOrigins = buildAllowedOrigins()
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (isOriginAllowed(origin, allowedOrigins)) {
+        callback(null, true)
+        return
+      }
+      callback(new Error(`CORS origin not allowed: ${origin}`))
+    }
+  })
+)
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ limit: '10mb', extended: true }))
 app.use(generalLimiter)
