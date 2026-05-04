@@ -29,7 +29,7 @@ const BottomNav = () => {
       const response = await notificationAPI.getUnreadCount()
       setUnreadCount(response.data.unreadCount || 0)
     } catch (err) {
-      console.warn('Impossible de recuperer le compteur de notifications:', err)
+      console.warn("Impossible de recuperer le compteur de notifications:", err)
     }
   }
 
@@ -38,22 +38,22 @@ const BottomNav = () => {
 
     fetchUnreadCount()
     const handleNotificationEvent = () => fetchUnreadCount()
-    window.addEventListener('notification:new', handleNotificationEvent)
-    return () => window.removeEventListener('notification:new', handleNotificationEvent)
+    window.addEventListener("notification:new", handleNotificationEvent)
+    return () => window.removeEventListener("notification:new", handleNotificationEvent)
   }, [user])
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-[9999] px-3 sm:px-4 pb-3 sm:pb-4">
+    <nav className="fixed bottom-0 left-0 right-0 z-[9999] max-w-full overflow-visible px-3 pb-3 sm:px-4 sm:pb-4">
       <div className="ndar-shell">
-        <div className="ndar-panel flex items-center justify-around rounded-[30px] border border-[#d7ae49]/40 px-1 sm:px-2 py-2 sm:py-3 backdrop-blur-xl bg-gradient-to-b from-[#1a1f2e] to-[#0f1419]">
+        <div className="ndar-panel flex min-w-0 items-center justify-around rounded-[30px] px-1 py-2 backdrop-blur-xl sm:px-2 sm:py-3">
           {mainItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               onClick={() => setShowMenu(false)}
               className={({ isActive }) =>
-                `flex min-w-[60px] sm:min-w-[72px] flex-col items-center gap-1 rounded-2xl px-2 sm:px-3 py-2 text-[10px] sm:text-[11px] font-semibold transition-all ${
-                  isActive ? "bg-[#d7ae49]/30 text-[#ffd700] shadow-[inset_0_1px_0_rgba(215,174,73,0.3)]" : "text-[#e8f0ff] hover:bg-[#3a5f7f]/60 hover:text-[#ffd700]"
+                `flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1.5 py-2 text-[10px] font-bold transition-all duration-200 sm:min-w-[72px] sm:px-3 sm:text-[11px] ${
+                  isActive ? "bg-white text-[#07335a] shadow-[0_18px_35px_rgba(0,0,0,0.18)]" : "text-white hover:bg-white/10"
                 }`
               }
             >
@@ -62,36 +62,34 @@ const BottomNav = () => {
             </NavLink>
           ))}
 
-          {/* Menu Button */}
-          <div className="relative">
+          <div className="relative flex min-w-0 flex-1 sm:flex-none">
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className={`flex min-w-[60px] sm:min-w-[72px] flex-col items-center gap-1 rounded-2xl px-2 sm:px-3 py-2 text-[10px] sm:text-[11px] font-semibold transition-all ${
-                showMenu ? "bg-[#d7ae49]/30 text-[#ffd700] shadow-[inset_0_1px_0_rgba(215,174,73,0.3)]" : "text-[#e8f0ff] hover:bg-[#3a5f7f]/60 hover:text-[#ffd700]"
+              className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1.5 py-2 text-[10px] font-bold transition-all duration-200 sm:min-w-[72px] sm:px-3 sm:text-[11px] ${
+                showMenu ? "bg-white text-[#07335a] shadow-[0_18px_35px_rgba(0,0,0,0.18)]" : "text-white hover:bg-white/10"
               }`}
             >
               <AppIcon name="menu" className="h-4 w-4 sm:h-5 sm:w-5" />
               <span className="line-clamp-1">Menu</span>
             </button>
 
-            {/* Dropdown Menu */}
             {showMenu && (
-              <div className="absolute bottom-full right-0 mb-2 rounded-2xl border border-[#d7ae49]/40 bg-gradient-to-b from-[#1a1f2e] to-[#0f1419] backdrop-blur-xl shadow-lg overflow-hidden w-44 sm:w-48">
+              <div className="absolute bottom-full right-0 mb-3 w-52 max-w-[calc(100vw-2rem)] origin-bottom-right animate-[premiumMenuIn_180ms_ease-out] overflow-hidden rounded-[24px] bg-white/98 p-2 shadow-[0_28px_80px_rgba(8,35,62,0.26)] backdrop-blur-xl sm:w-56">
                 {menuItems.map((item) => (
                   <NavLink
                     key={item.to}
                     to={item.to}
                     onClick={() => setShowMenu(false)}
                     className={({ isActive }) =>
-                      `flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-semibold transition-all ${
-                        isActive ? "bg-[#d7ae49]/25 text-[#ffd700]" : "text-[#e8f0ff] hover:bg-[#3a5f7f]/50 hover:text-[#ffd700]"
+                      `flex items-center gap-2 rounded-[18px] px-3 py-3 text-xs font-bold transition-all duration-200 sm:gap-3 sm:px-4 sm:text-sm ${
+                        isActive ? "bg-[#eaf4ff] text-[#07335a]" : "text-[#0b1f33] hover:bg-[#f1f7ff]"
                       }`
                     }
                   >
-                    <span className="flex-shrink-0 text-[#d7ae49]">
+                    <span className="flex-shrink-0 text-[#1260a1]">
                       <AppIcon name={item.icon} className="h-4 w-4 sm:h-5 sm:w-5" />
                     </span>
-                    <div className="flex-1 flex items-center justify-between">
+                    <div className="flex flex-1 items-center justify-between">
                       <span>{item.label}</span>
                       {item.to === "/notifications" && unreadCount > 0 && (
                         <span className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-[#f87171] px-1.5 text-[10px] font-black text-white">
@@ -101,14 +99,13 @@ const BottomNav = () => {
                     </div>
                   </NavLink>
                 ))}
-                
-                {/* Logout */}
+
                 <button
                   onClick={() => {
                     logout()
                     navigate("/login", { replace: true })
                   }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-[#ff6b6b] hover:bg-red-500/15 transition-colors border-t border-[#d7ae49]/20"
+                  className="mt-1 flex w-full items-center gap-3 rounded-[18px] px-4 py-3 text-sm font-bold text-[#b4232a] transition-colors hover:bg-red-50"
                 >
                   <AppIcon name="logout" className="h-5 w-5" />
                   <span>Déconnexion</span>

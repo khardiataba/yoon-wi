@@ -30,6 +30,9 @@
 
 html {
   min-height: 100%;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
   background:
     radial-gradient(circle at 12% 10%, rgba(223, 241, 244, 0.95), transparent 28%),
     radial-gradient(circle at 82% 14%, rgba(121, 171, 201, 0.34), transparent 24%),
@@ -40,6 +43,8 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
   color: var(--ndar-text);
   font-family: "Poppins", "Segoe UI", sans-serif;
   background:
@@ -78,6 +83,16 @@ body::after {
 
 #root {
   min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
 }
 
 button,
@@ -215,9 +230,65 @@ button {
   box-shadow: var(--ndar-shadow-soft);
 }
 
+.premium-action {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #0a7cff 0%, #064c93 100%);
+  color: #ffffff;
+  box-shadow: 0 22px 55px rgba(8, 104, 199, 0.28);
+}
+
+.premium-action::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 0%, rgba(255, 255, 255, 0.26) 42%, transparent 58%);
+  transform: translateX(-120%);
+  transition: transform 520ms ease;
+}
+
+.premium-action:hover::after {
+  transform: translateX(120%);
+}
+
+.yoonwi-map-tiles {
+  filter: saturate(1.18) hue-rotate(180deg) brightness(1.03) contrast(1.02);
+}
+
+@keyframes premiumMenuIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .leaflet-container {
   background: #cfe5f5 !important;
   border-radius: 28px;
+}
+
+.yoonwi-map-shell {
+  isolation: isolate;
+  contain: layout paint;
+  z-index: 0;
+}
+
+.yoonwi-map-shell .leaflet-container,
+.yoonwi-map-shell .leaflet-pane,
+.yoonwi-map-shell .leaflet-top,
+.yoonwi-map-shell .leaflet-bottom {
+  z-index: 0 !important;
+}
+
+.yoonwi-map-shell .leaflet-marker-pane,
+.yoonwi-map-shell .leaflet-overlay-pane,
+.yoonwi-map-shell .leaflet-shadow-pane,
+.yoonwi-map-shell .leaflet-tile-pane {
+  z-index: auto !important;
 }
 
 .leaflet-control-container {

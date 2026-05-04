@@ -32,11 +32,19 @@ class RatingService {
       }
 
       // Vérifier que la personne qui note a participé à la course
-      const isValidRater = (type === 'passenger-to-driver' && ride.passenger.toString() === raterId) ||
-                          (type === 'driver-to-passenger' && ride.driver.toString() === raterId);
+      const isPassengerToDriver = type === 'passenger-to-driver';
+      const isDriverToPassenger = type === 'driver-to-passenger';
+      const isValidRater = (isPassengerToDriver && String(ride.userId || '') === String(raterId || '')) ||
+                          (isDriverToPassenger && String(ride.driverId || '') === String(raterId || ''));
+
+      const expectedRatedId = isPassengerToDriver ? ride.driverId : ride.userId;
 
       if (!isValidRater) {
         throw new Error('Vous n\'êtes pas autorisé à noter cette course');
+      }
+
+      if (!expectedRatedId || String(expectedRatedId || '') !== String(ratedId || '')) {
+        throw new Error('Utilisateur noté invalide pour cette course');
       }
 
       // Créer l'objet de notation
@@ -117,11 +125,19 @@ class RatingService {
       }
 
       // Validation du rater
-      const isValidRater = (type === 'client-to-provider' && serviceRequest.client.toString() === raterId) ||
-                          (type === 'provider-to-client' && serviceRequest.provider.toString() === raterId);
+      const isClientToProvider = type === 'client-to-provider';
+      const isProviderToClient = type === 'provider-to-client';
+      const isValidRater = (isClientToProvider && String(serviceRequest.clientId || '') === String(raterId || '')) ||
+                          (isProviderToClient && String(serviceRequest.technicianId || '') === String(raterId || ''));
+
+      const expectedRatedId = isClientToProvider ? serviceRequest.technicianId : serviceRequest.clientId;
 
       if (!isValidRater) {
         throw new Error('Vous n\'êtes pas autorisé à noter ce service');
+      }
+
+      if (!expectedRatedId || String(expectedRatedId || '') !== String(ratedId || '')) {
+        throw new Error('Utilisateur noté invalide pour ce service');
       }
 
       const ratingData = {
@@ -242,8 +258,8 @@ class RatingService {
       // Récupérer les notations depuis les courses
       const rideRatings = await Ride.find({
         $or: [
-          { passenger: userId },
-          { driver: userId }
+          { userId },
+          { driverId: userId }
         ],
         'ratings.ratedId': userId
       })
@@ -254,8 +270,8 @@ class RatingService {
       // Récupérer les notations depuis les services
       const serviceRatings = await ServiceRequest.find({
         $or: [
-          { client: userId },
-          { provider: userId }
+          { clientId: userId },
+          { technicianId: userId }
         ],
         'ratings.ratedId': userId
       })

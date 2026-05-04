@@ -213,6 +213,17 @@ const DriverTracking = () => {
     return ride.pickup
   }, [passengerLocation, ride])
 
+  const mapPickup = useMemo(() => {
+    if (!ride) return null
+    if (ride.status === "ongoing") return hasExactLocation(passengerLocation) ? passengerLocation : ride.pickup
+    return navigationTarget
+  }, [navigationTarget, passengerLocation, ride])
+
+  const mapDestination = useMemo(() => {
+    if (!ride) return null
+    return ride.status === "ongoing" ? ride.destination : null
+  }, [ride])
+
   useEffect(() => {
     if (!hasExactLocation(driverLocation) || !hasExactLocation(navigationTarget)) return
 
@@ -285,7 +296,7 @@ const DriverTracking = () => {
         </div>
 
         {locationPermission === false && (
-          <div className="ndar-card rounded-2xl p-4 border border-red-500/30 bg-red-500/10 text-[#fff7ec]">
+          <div className="ndar-card rounded-2xl p-4 border border-[#5a8fd1]/30 bg-[#edf5fb] text-[#0a3760]">
             Activez la localisation pour partager votre position et calculer un itineraire exact.
           </div>
         )}
@@ -311,7 +322,7 @@ const DriverTracking = () => {
           </div>
 
           {routeError && (
-            <div className="mt-3 rounded-2xl bg-[#fff1f1] px-4 py-3 text-sm text-[#a54b55]">
+            <div className="mt-3 rounded-2xl bg-[#edf5fb] px-4 py-3 text-sm text-[#0a3760]">
               {routeError}
             </div>
           )}
@@ -322,8 +333,8 @@ const DriverTracking = () => {
           <div className="h-[340px] rounded-xl overflow-hidden border border-[#d7ae49]/20">
             <MapPicker
               center={driverLocation || navigationTarget || ride.pickup}
-              initialPickup={hasExactLocation(passengerLocation) ? passengerLocation : ride.pickup}
-              initialDestination={ride.destination}
+              initialPickup={mapPickup}
+              initialDestination={mapDestination}
               driverPosition={driverLocation}
               routeGeometry={navigationRoute.length ? navigationRoute : ride.routeGeometry}
               readOnly
@@ -376,11 +387,11 @@ const DriverTracking = () => {
 
         {shakeDetected && (
           <div className="fixed bottom-24 left-4 right-4 z-50">
-            <div className="bg-[#a54b55] text-white p-4 rounded-2xl text-center shadow-2xl">
+            <div className="bg-[#0a3760] text-white p-4 rounded-2xl text-center shadow-2xl">
               <div className="font-bold text-lg mb-2">Alerte secousse detectee</div>
               <div className="text-sm mb-4">SOS automatique dans {countdown}s</div>
               <div className="flex justify-center gap-3">
-                <button onClick={confirmShake} className="bg-white text-[#a54b55] px-5 py-2 rounded-xl font-bold">
+                <button onClick={confirmShake} className="bg-white text-[#0a3760] px-5 py-2 rounded-xl font-bold">
                   Envoyer maintenant
                 </button>
                 <button onClick={clearShake} className="bg-white/20 px-5 py-2 rounded-xl font-semibold">

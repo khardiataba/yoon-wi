@@ -114,7 +114,9 @@ const AppRoutes = () => {
         path="/ride/:id"
         element={
           <ProtectedRoute>
-            <RideDetails />
+            <MainLayout>
+              <RideDetails />
+            </MainLayout>
           </ProtectedRoute>
         }
       />
@@ -182,7 +184,9 @@ const AppRoutes = () => {
         path="/service/:id"
         element={
           <ProtectedRoute>
-            <ServiceDetails />
+            <MainLayout>
+              <ServiceDetails />
+            </MainLayout>
           </ProtectedRoute>
         }
       />

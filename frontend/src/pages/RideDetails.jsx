@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import api from "../api"
 import { useAuth } from "../context/AuthContext"
+import RatingModal from "../components/RatingModal"
+import { ratingAPI } from "../api"
 
 export default function RideDetails() {
   const { id } = useParams()
@@ -13,6 +15,7 @@ export default function RideDetails() {
   const [sendingMsg, setSendingMsg] = useState(false)
   const [paying, setPaying] = useState(false)
   const [statusMessage, setStatusMessage] = useState("")
+  const [ratingOpen, setRatingOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -103,6 +106,9 @@ export default function RideDetails() {
   const isClient = String(ride?.userId?._id || ride?.userId || "") === String(user?._id || "")
   const messagingOpen = ["accepted", "ongoing", "completed"].includes(String(ride.status || ""))
   const canPayNow = isClient && ["ongoing", "completed"].includes(String(ride.status || "")) && ridePaymentStatus !== "paid"
+  const canRateDriver = isClient && ride.status === "completed" && (ride.driverId || ride.driver?._id)
+  const driverId = ride.driver?._id || ride.driverId
+  const driverName = ride.driver?.name || "Chauffeur"
 
   return (
     <div className="min-h-screen bg-[#f7f1e6] pb-24">
@@ -181,6 +187,14 @@ export default function RideDetails() {
                 {paying ? "Paiement..." : "Payer maintenant"}
               </button>
             )}
+            {canRateDriver && (
+              <button
+                onClick={() => setRatingOpen(true)}
+                className="rounded-2xl bg-[#fff7eb] px-4 py-3 text-sm font-bold text-[#9a7a24]"
+              >
+                Donner des étoiles
+              </button>
+            )}
           </div>
         </div>
 
@@ -227,6 +241,16 @@ export default function RideDetails() {
           </div>
         )}
       </div>
+
+      <RatingModal
+        isOpen={ratingOpen}
+        onClose={() => setRatingOpen(false)}
+        title="Noter le chauffeur"
+        subtitle="Votre note aide les prochains clients."
+        type="ride"
+        targetName={driverName}
+        onSubmit={({ rating, comment }) => ratingAPI.addRideRating(ride._id, driverId, rating, comment, "passenger-to-driver")}
+      />
     </div>
   )
 }

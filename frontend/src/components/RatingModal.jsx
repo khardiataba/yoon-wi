@@ -131,7 +131,7 @@ const RatingModal = ({
               {/* Rating Tips */}
               <div className="bg-blue-50 p-4 rounded-md">
                 <h4 className="text-sm font-medium text-blue-800 mb-2">
-                  ELECTRICITE Conseils pour une bonne notation
+                  Conseils pour une bonne notation
                 </h4>
                 <ul className="text-xs text-blue-700 space-y-1">
                   <li>• Soyez honnête et constructif</li>

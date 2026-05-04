@@ -65,6 +65,11 @@ const getProviderImageUrl = (provider) => {
   return resolveMediaUrl(source)
 }
 
+const getPreviewMediaUrl = (item) => {
+  if (!item) return ""
+  return resolveMediaUrl(item.thumbnailUrl || item.imageUrl || item.videoUrl || "")
+}
+
 const formatPriceRange = (startingPrice, maxPrice, currency = "XOF", unit = "service") => {
   const start = Number(startingPrice || 0)
   const end = Number(maxPrice || 0)
@@ -107,6 +112,17 @@ const providerMatchesQuery = (provider, query) => {
       provider.experienceYears,
       provider.beautySpecialty,
       provider.otherServiceDetail,
+      ...(Array.isArray(provider.portfolio?.offerings)
+        ? provider.portfolio.offerings.flatMap((item) => [item.title, item.description, item.unit])
+        : []),
+      ...(Array.isArray(provider.portfolio?.previewItems)
+        ? provider.portfolio.previewItems.flatMap((item) => [
+            item.title,
+            item.description,
+            item.category,
+            ...(Array.isArray(item.tags) ? item.tags : [])
+          ])
+        : []),
       ...(Array.isArray(provider.searchKeywords) ? provider.searchKeywords : [])
     ]
       .filter(Boolean)
@@ -591,11 +607,73 @@ const Service = () => {
                             </div>
                           )}
 
+                          {Array.isArray(provider.portfolio?.previewItems) && provider.portfolio.previewItems.length > 0 && (
+                            <div className="mt-4 rounded-[22px] border border-[#dce7f0] bg-[#f8fbff] p-3">
+                              <div className="mb-3 flex items-center justify-between gap-3">
+                                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#70839a]">Aperçus des services</div>
+                                <div className="rounded-full bg-white px-3 py-1 text-[10px] font-bold text-[#1260a1]">
+                                  {provider.portfolio.totalImages || provider.portfolio.previewItems.length} média
+                                </div>
+                              </div>
+                              {(() => {
+                                const mainItem = provider.portfolio.previewItems[0]
+                                return (
+                                  <div className="overflow-hidden rounded-[18px] border border-[#dbe8f1] bg-white">
+                                    {mainItem.mediaType === "video" && mainItem.videoUrl ? (
+                                      <video
+                                        src={resolveMediaUrl(mainItem.videoUrl)}
+                                        className="h-44 w-full bg-[#dbe8f1] object-cover sm:h-56"
+                                        muted
+                                        playsInline
+                                        controls
+                                      />
+                                    ) : (
+                                      <img
+                                        src={getPreviewMediaUrl(mainItem)}
+                                        alt={mainItem.title || provider.name}
+                                        className="h-44 w-full bg-[#dbe8f1] object-cover sm:h-56"
+                                        loading="lazy"
+                                      />
+                                    )}
+                                    <div className="p-4">
+                                      <div className="font-semibold text-[#16324f]">{mainItem.title || "Service réalisé"}</div>
+                                      {mainItem.description && <div className="mt-1 text-sm text-[#5f7184]">{mainItem.description}</div>}
+                                      {formatPriceRange(mainItem.pricing?.startingPrice, mainItem.pricing?.maxPrice, mainItem.pricing?.currency, mainItem.pricing?.unit) && (
+                                        <div className="mt-2 inline-flex rounded-full bg-[#eefaf2] px-3 py-1 text-xs font-bold text-[#178b55]">
+                                          {formatPriceRange(mainItem.pricing?.startingPrice, mainItem.pricing?.maxPrice, mainItem.pricing?.currency, mainItem.pricing?.unit)}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )
+                              })()}
+                              {provider.portfolio.previewItems.length > 1 && (
+                                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                                  {provider.portfolio.previewItems.slice(1, 4).map((item) => (
+                                    <div key={item.id} className="overflow-hidden rounded-[14px] border border-[#dce7f0] bg-white">
+                                      {item.mediaType === "video" && item.videoUrl ? (
+                                        <video src={resolveMediaUrl(item.videoUrl)} className="h-24 w-full object-cover" muted playsInline />
+                                      ) : (
+                                        <img
+                                          src={getPreviewMediaUrl(item)}
+                                          alt={item.title || provider.name}
+                                          className="h-24 w-full object-cover"
+                                          loading="lazy"
+                                        />
+                                      )}
+                                      <div className="truncate px-2 py-2 text-xs font-semibold text-[#16324f]">{item.title || "Aperçu"}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
                           {Array.isArray(provider.portfolio?.offerings) && provider.portfolio.offerings.length > 0 && (
                             <div className="mt-3 space-y-2">
-                              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#70839a]">Prestations et tarifs</div>
-                              {provider.portfolio.offerings.slice(0, 2).map((offering) => (
-                                <div key={offering.id} className="rounded-[18px] border border-[#dbe8f1] bg-[#f8fbff] px-4 py-3">
+                              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#70839a]">Services proposés par ce prestataire</div>
+                              {provider.portfolio.offerings.slice(0, 4).map((offering) => (
+                                <div key={offering.id} className="rounded-[18px] border border-[#dbe8f1] bg-white px-4 py-3">
                                   <div className="flex flex-wrap items-center justify-between gap-2">
                                     <div className="font-semibold text-[#16324f]">{offering.title}</div>
                                     <div className="text-sm font-bold text-[#1260a1]">
@@ -605,41 +683,6 @@ const Service = () => {
                                   {offering.description && <div className="mt-1 text-sm text-[#5f7184]">{offering.description}</div>}
                                 </div>
                               ))}
-                            </div>
-                          )}
-
-                          {Array.isArray(provider.portfolio?.previewItems) && provider.portfolio.previewItems.length > 0 && (
-                            <div className="mt-3">
-                              <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#70839a]">Apercus du prestataire</div>
-                              <div className="grid grid-cols-3 gap-2">
-                                {provider.portfolio.previewItems.slice(0, 3).map((item) => (
-                                  <div key={item.id} className="overflow-hidden rounded-[16px] border border-[#dce7f0] bg-[#edf5fb]">
-                                    {item.mediaType === "video" && item.videoUrl ? (
-                                      <video
-                                        src={resolveMediaUrl(item.videoUrl)}
-                                        className="h-20 w-full object-cover"
-                                        muted
-                                        playsInline
-                                        controls
-                                      />
-                                    ) : (
-                                      <img
-                                        src={resolveMediaUrl(item.thumbnailUrl || item.imageUrl)}
-                                        alt={item.title || provider.name}
-                                        className="h-20 w-full object-cover"
-                                      />
-                                    )}
-                                    <div className="px-2 py-2">
-                                      <div className="truncate text-xs font-semibold text-[#16324f]">{item.title || "Apercu"}</div>
-                                      {formatPriceRange(item.pricing?.startingPrice, item.pricing?.maxPrice, item.pricing?.currency, item.pricing?.unit) && (
-                                        <div className="mt-1 truncate text-[10px] text-[#178b55]">
-                                          {formatPriceRange(item.pricing?.startingPrice, item.pricing?.maxPrice, item.pricing?.currency, item.pricing?.unit)}
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
                             </div>
                           )}
                         </div>

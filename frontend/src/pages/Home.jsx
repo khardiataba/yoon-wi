@@ -118,7 +118,7 @@ const discoveryCatalog = [
     eta: "30 min",
     isOpen: true,
     price: 7000,
-    accent: "bg-[#fff1f1]",
+    accent: "bg-[#edf5fb]",
     iconSymbol: "electricity",
     coords: { lat: 16.0188, lng: -16.4919 }
   },
@@ -146,7 +146,7 @@ const discoveryCatalog = [
     eta: "40 min",
     isOpen: false,
     price: 12000,
-    accent: "bg-[#fff2f7]",
+    accent: "bg-[#eef4ff]",
     iconSymbol: "beauty",
     coords: { lat: 16.0149, lng: -16.5072 }
   },
@@ -244,7 +244,7 @@ const discoveryCatalog = [
     eta: "90 min",
     isOpen: true,
     price: 20000,
-    accent: "bg-[#fce7f3]",
+    accent: "bg-[#edf5fb]",
     iconSymbol: "cleaning",
     coords: { lat: 16.0244, lng: -16.5015 }
   },
@@ -258,7 +258,7 @@ const discoveryCatalog = [
     eta: "120 min",
     isOpen: false,
     price: 25000,
-    accent: "bg-[#fdf2f8]",
+    accent: "bg-[#f7fbff]",
     iconSymbol: "guard",
     coords: { lat: 16.0244, lng: -16.5015 }
   }
@@ -808,7 +808,7 @@ const Home = () => {
 
         {/* MESSAGES D'ETAT */}
         {error && (
-          <div className="rounded-[24px] bg-red-50 p-4 text-center text-sm text-red-600">
+          <div className="rounded-[24px] bg-[#f7fbff] p-4 text-center text-sm font-semibold text-[#0a3760]">
             {error}
           </div>
         )}
@@ -818,6 +818,7 @@ const Home = () => {
             Chargement...
           </div>
         )}
+
       </div>
     </div>
   )

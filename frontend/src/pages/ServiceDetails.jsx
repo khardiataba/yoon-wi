@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom"
 import api from "../api"
 import { useAuth } from "../context/AuthContext"
 import useShakeDetection from "../hooks/useShakeDetection"
+import RatingModal from "../components/RatingModal"
+import { ratingAPI } from "../api"
 
 export default function ServiceDetails() {
   const { id } = useParams()
@@ -12,33 +14,22 @@ export default function ServiceDetails() {
   const [service, setService] = useState(null)
   const [messages, setMessages] = useState([])
   const [newMessage, setNewMessage] = useState("")
-  const [contributionStatus, setContributionStatus] = useState("due")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [statusMessage, setStatusMessage] = useState("")
   const [sendingMsg, setSendingMsg] = useState(false)
   const [sendingSOS, setSendingSOS] = useState(false)
+  const [ratingOpen, setRatingOpen] = useState(false)
 
   const loadService = useCallback(async () => {
     const serviceRes = await api.get(`/services/${id}`)
     setService(serviceRes.data)
-    setContributionStatus(serviceRes.data.platformContributionStatus || "due")
   }, [id])
 
   const loadMessages = useCallback(async () => {
     const msgRes = await api.get(`/services/${id}/messages`)
     setMessages(Array.isArray(msgRes.data) ? msgRes.data : [])
   }, [id])
-
-  const refreshContributionStatus = useCallback(async () => {
-    try {
-      const paymentRes = await api.get(`/services/${id}/payment-status`)
-      setContributionStatus(paymentRes.data?.platformContributionStatus || "due")
-      return paymentRes.data?.platformContributionStatus || "due"
-    } catch {
-      return contributionStatus
-    }
-  }, [id, contributionStatus])
 
   const sendEmergencyAlert = useCallback(async () => {
     if (!service?._id) return
@@ -71,7 +62,6 @@ export default function ServiceDetails() {
         setLoading(true)
         setError("")
         await Promise.all([loadService(), loadMessages()])
-        await refreshContributionStatus()
       } catch (loadError) {
         if (!cancelled) {
           setError(loadError.response?.data?.message || "Erreur de chargement.")
@@ -85,16 +75,15 @@ export default function ServiceDetails() {
     return () => {
       cancelled = true
     }
-  }, [loadMessages, loadService, refreshContributionStatus])
+  }, [loadMessages, loadService])
 
   useEffect(() => {
     const timer = setInterval(() => {
       loadMessages()
       loadService()
-      refreshContributionStatus()
     }, 12000)
     return () => clearInterval(timer)
-  }, [loadMessages, loadService, refreshContributionStatus])
+  }, [loadMessages, loadService])
 
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return
@@ -112,15 +101,6 @@ export default function ServiceDetails() {
     }
   }
 
-  const verifyContribution = async () => {
-    const nextStatus = await refreshContributionStatus()
-    if (nextStatus === "paid") {
-      setStatusMessage("Contribution deja reglee.")
-    } else {
-      setStatusMessage("Contribution en attente de paiement.")
-    }
-  }
-
   if (loading) return <div className="min-h-screen flex items-center justify-center">Chargement...</div>
   if (error && !service) return <div className="min-h-screen p-4 flex items-center justify-center text-red-500">{error}</div>
   if (!service) return <div className="min-h-screen p-4">Service non trouve</div>
@@ -128,11 +108,12 @@ export default function ServiceDetails() {
   const clientId = typeof service.clientId === "object" ? service.clientId?._id : service.clientId
   const technicianId = typeof service.technicianId === "object" ? service.technicianId?._id : service.technicianId
   const isClient = String(clientId || "") === String(user?._id || "")
-  const isTechnician = String(technicianId || "") === String(user?._id || "")
   const messagingOpen =
     ["accepted", "in_progress", "quoted"].includes(String(service.status || "")) ||
     (String(service.status || "") === "pending" && Boolean(technicianId))
   const canUseSOS = ["accepted", "in_progress"].includes(String(service.status || ""))
+  const canRateProvider = isClient && service.status === "completed" && technicianId
+  const providerName = service.technician?.name || service.assignedProvider?.name || "Prestataire"
 
   return (
     <div className="min-h-screen bg-[#f7f1e6] pb-24">
@@ -151,24 +132,6 @@ export default function ServiceDetails() {
       <div className="max-w-4xl mx-auto p-4 space-y-6">
         {error && <div className="rounded-2xl bg-[#fff1f1] px-4 py-3 text-sm text-[#a54b55]">{error}</div>}
         {statusMessage && <div className="rounded-2xl bg-[#f7fbff] px-4 py-3 text-sm text-[#165c96]">{statusMessage}</div>}
-
-        {(isClient || isTechnician) && (
-          <div className="bg-white rounded-[30px] p-6 shadow-lg">
-            <h3 className="text-lg font-bold mb-4 text-[#16324f]">Contribution plateforme</h3>
-            <div className={`rounded-[20px] p-4 border-2 ${contributionStatus === "paid" ? "bg-[#eefaf2] border-[#18c56e]" : "bg-[#fff1f1] border-[#c45860]"}`}>
-              <p className={`font-semibold ${contributionStatus === "paid" ? "text-[#178b55]" : "text-[#c45860]"}`}>
-                {contributionStatus === "paid" ? "Contribution reglee" : "Contribution non reglee"}
-              </p>
-              <p className="text-sm text-[#70839a] mt-1">{Number(service.appCommissionAmount || 0).toLocaleString()} FCFA</p>
-              <button onClick={verifyContribution} className="mt-3 w-full bg-[#1260a1] text-white font-bold py-2 rounded-[20px] hover:opacity-90">
-                Rafraichir le statut
-              </button>
-              <p className="text-xs text-[#70839a] mt-3">
-                La mission ne peut pas etre cloturee tant que la contribution n'est pas payee.
-              </p>
-            </div>
-          </div>
-        )}
 
         {canUseSOS && (
           <div className="bg-white rounded-[30px] p-6 shadow-lg">
@@ -267,7 +230,29 @@ export default function ServiceDetails() {
             Communication active des qu'un prestataire est lie a la demande.
           </div>
         )}
+
+        {canRateProvider && (
+          <div className="bg-white rounded-[30px] p-6 shadow-lg">
+            <h3 className="text-lg font-bold mb-3 text-[#16324f]">Avis client</h3>
+            <button
+              onClick={() => setRatingOpen(true)}
+              className="rounded-2xl bg-[#fff7eb] px-4 py-3 text-sm font-bold text-[#9a7a24]"
+            >
+              Donner des étoiles au prestataire
+            </button>
+          </div>
+        )}
       </div>
+
+      <RatingModal
+        isOpen={ratingOpen}
+        onClose={() => setRatingOpen(false)}
+        title="Noter le prestataire"
+        subtitle="Votre avis aide les prochains clients."
+        type="service"
+        targetName={providerName}
+        onSubmit={({ rating, comment }) => ratingAPI.addServiceRating(service._id, technicianId, rating, comment, "client-to-provider")}
+      />
     </div>
   )
 }

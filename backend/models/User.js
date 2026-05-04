@@ -129,6 +129,14 @@ const UserSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  commissionCreditBalance: {
+    type: Number,
+    default: 0
+  },
+  commissionCreditUpdatedAt: {
+    type: Date,
+    default: null
+  },
   // Online Status
   isOnline: {
     type: Boolean,
@@ -159,7 +167,6 @@ const UserSchema = new mongoose.Schema({
 })
 
 // Add indexes for performance
-UserSchema.index({ email: 1 })
 UserSchema.index({ phone: 1 })
 UserSchema.index({ status: 1, role: 1 })
 UserSchema.index({ createdAt: -1 })

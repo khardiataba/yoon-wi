@@ -153,6 +153,7 @@ const RideTracking = () => {
   const hasDriver = Boolean(ride?.driverId || ride?.driver?._id)
   const isSearchingDriver = !hasDriver && ride?.driverAvailabilityStatus === "searching"
   const noDriverAvailable = !hasDriver && ride?.driverAvailabilityStatus === "no_driver_available"
+  const hasRideData = Boolean(rideIdentifier)
 
   const copySafetyCode = async () => {
     try {
@@ -217,6 +218,24 @@ Code PIN: ${safetyCode}`
   return (
     <div className="min-h-screen px-4 pb-10 pt-5">
       <div className="ndar-shell space-y-4">
+        {!hasRideData ? (
+          <section className="ndar-card rounded-[38px] p-6 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#edf5fb] text-[#165c96]">
+              <span className="text-2xl">⌛</span>
+            </div>
+            <h2 className="mt-4 font-['Sora'] text-2xl font-bold text-[#16324f]">Suivi indisponible</h2>
+            <p className="mt-2 text-sm text-[#5f7184]">
+              Le suivi de course s'affichera ici dès qu'une réservation sera confirmée.
+            </p>
+            <button
+              onClick={() => navigate("/ride")}
+              className="mt-5 rounded-[24px] bg-[linear-gradient(135deg,#1260a1_0%,#0a3760_100%)] px-5 py-3 text-sm font-bold text-white shadow-[0_18px_34px_rgba(8,35,62,0.18)]"
+            >
+              Réserver une course
+            </button>
+          </section>
+        ) : (
+        <>
         <header className="rounded-[38px] border border-[#0b3154] bg-[linear-gradient(180deg,#0d416e_0%,#072a48_100%)] p-5 shadow-[0_24px_60px_rgba(8,35,62,0.30)]">
           <div className="flex items-center justify-between gap-4">
             <button onClick={() => navigate(-1)} className="rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-semibold text-[#fff4e4]">Fermer</button>
@@ -238,7 +257,7 @@ Code PIN: ${safetyCode}`
 
         <section className="ndar-card rounded-[32px] p-5">
           <div className={`mb-4 rounded-2xl px-4 py-3 text-sm font-semibold ${
-            noDriverAvailable ? "bg-[#fff1f1] text-[#a54b55]" : "bg-[#edf5fb] text-[#165c96]"
+            noDriverAvailable ? "bg-[#fff7ec] text-[#7a5a12]" : "bg-[#edf5fb] text-[#165c96]"
           }`}>
             {hasDriver
               ? "Chauffeur disponible: un chauffeur a accepte votre course."
@@ -276,7 +295,7 @@ Code PIN: ${safetyCode}`
             <button
               onClick={sendEmergencyAlert}
               disabled={sendingAlert}
-              className="rounded-[24px] bg-[#fff1f1] px-4 py-3 text-sm font-bold text-[#a54b55] shadow-[0_12px_26px_rgba(8,35,62,0.08)] disabled:cursor-not-allowed disabled:opacity-70"
+              className="rounded-[24px] bg-[#edf5fb] px-4 py-3 text-sm font-bold text-[#0a3760] shadow-[0_12px_26px_rgba(8,35,62,0.08)] disabled:cursor-not-allowed disabled:opacity-70"
             >
               {sendingAlert ? "Alerte..." : "SOS / Signaler"}
             </button>
@@ -319,7 +338,7 @@ Code PIN: ${safetyCode}`
               <div className="mt-1 font-['Sora'] text-lg font-bold text-[#1260a1]">{ridePrice}</div>
             </div>
           </div>
-          {error && <div className="mt-4 rounded-2xl bg-[#fff1f1] px-4 py-3 text-sm text-[#a54b55]">{error}</div>}
+          {error && <div className="mt-4 rounded-2xl bg-[#edf5fb] px-4 py-3 text-sm text-[#0a3760]">{error}</div>}
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <div className="rounded-[26px] bg-[linear-gradient(180deg,#fffdfa_0%,#f7f0e5_100%)] p-4 shadow-[0_12px_28px_rgba(8,35,62,0.06)]">
               <div className="text-xs uppercase tracking-[0.2em] text-[#5a8fd1]">Depart</div>
@@ -349,15 +368,17 @@ Code PIN: ${safetyCode}`
             <button onClick={() => navigate("/")} className="rounded-[24px] bg-[#edf3f8] px-5 py-3 text-sm font-bold text-[#1260a1]">Retour accueil</button>
           </div>
         </section>
+        </>
+        )}
       </div>
 
       {shakeDetected && (
         <div className="fixed bottom-24 left-4 right-4 z-50">
-          <div className="bg-[#a54b55] text-white p-4 rounded-2xl text-center shadow-2xl">
+          <div className="bg-[#0a3760] text-white p-4 rounded-2xl text-center shadow-2xl">
             <div className="font-bold text-lg mb-2">Alerte secousse detectee</div>
             <div className="text-sm mb-4">SOS automatique dans {countdown}s</div>
             <div className="flex justify-center gap-3">
-              <button onClick={confirmShake} className="bg-white text-[#a54b55] px-5 py-2 rounded-xl font-bold">
+              <button onClick={confirmShake} className="bg-white text-[#0a3760] px-5 py-2 rounded-xl font-bold">
                 Envoyer maintenant
               </button>
               <button onClick={clearShake} className="bg-white/20 px-5 py-2 rounded-xl font-semibold">
