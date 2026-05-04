@@ -406,6 +406,36 @@ class SocketManager {
     }
   }
 
+  emitNewRideRequest(ride, pickupLocation, vehicleType = null) {
+    if (!ride || !pickupLocation) return
+
+    const availableDrivers = this.findAvailableDrivers(pickupLocation, vehicleType)
+    const payload = {
+      rideId: ride._id,
+      _id: ride._id,
+      status: ride.status,
+      driverAvailabilityStatus: ride.driverAvailabilityStatus,
+      pickup: ride.pickup,
+      vehicleType: ride.vehicleType,
+      rideCategory: ride.rideCategory,
+      busZone: ride.busZone,
+      distanceKm: ride.distanceKm,
+      durationMin: ride.durationMin,
+      price: ride.price,
+      appCommissionPercent: ride.appCommissionPercent,
+      appCommissionAmount: ride.appCommissionAmount,
+      providerNetAmount: ride.providerNetAmount,
+      createdAt: ride.createdAt
+    }
+
+    availableDrivers.forEach((driver) => {
+      const driverSocket = this.io?.sockets?.sockets?.get(driver.socketId)
+      if (driverSocket) {
+        driverSocket.emit('ride:new-request', payload)
+      }
+    })
+  }
+
   // Utility methods for external use
   getConnectedUsers() {
     return Array.from(this.connectedUsers.keys());

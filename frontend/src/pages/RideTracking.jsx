@@ -23,7 +23,7 @@ const trackingSteps = [
 const RideTracking = () => {
   const navigate = useNavigate()
   const { emit, isConnected } = useSocket()
-  const [driverPosition, setDriverPosition] = useState({ lat: 16.026, lng: -16.503 })
+  const [driverPosition, setDriverPosition] = useState(null)
   const [ride, setRide] = useState(null)
   const [error, setError] = useState(null)
   const [statusMessage, setStatusMessage] = useState("")
@@ -317,7 +317,7 @@ Code PIN: ${safetyCode}`
         <section className="ndar-card rounded-[38px] p-4">
           <div className="h-[360px] overflow-hidden rounded-[30px]">
             <MapPicker
-              center={driverPosition}
+              center={driverPosition || ride?.pickup || ride?.destination}
               initialPickup={ride?.pickup}
               initialDestination={ride?.destination}
               driverPosition={driverPosition}

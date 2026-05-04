@@ -309,6 +309,12 @@ router.post("/", authMiddleware, requireVerified, async (req, res) => {
       driverAvailabilityStatus
     })
 
+    socketManager.emitNewRideRequest(
+      ride,
+      { latitude: locationValidation.pickup.lat, longitude: locationValidation.pickup.lng },
+      null
+    )
+
     return res.status(201).json({
       ...(await serializeRide(ride, { includeSafetyCode: true, viewerUserId: req.user._id, viewerRole: req.user.role })),
       safetyCode,
