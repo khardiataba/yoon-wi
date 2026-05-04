@@ -25,5 +25,7 @@ services:
         value: xof
       - key: GOOGLE_MAPS_API_KEY
         sync: false
+      - key: ENABLE_OCR_VERIFICATION
+        value: "false"
       - key: ADMIN_USER_ID
         sync: false

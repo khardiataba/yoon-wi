@@ -1,6 +1,5 @@
-const { createWorker } = require("tesseract.js")
-
 const OCR_LANGUAGE = "fra+eng"
+const OCR_ENABLED = String(process.env.ENABLE_OCR_VERIFICATION || "").toLowerCase() === "true"
 
 const normalizeText = (value = "") =>
   value
@@ -62,6 +61,7 @@ const buildCheck = (status, note) => ({
 })
 
 const extractTextFromImage = async (filePath) => {
+  const { createWorker } = require("tesseract.js")
   const worker = await createWorker(OCR_LANGUAGE)
 
   try {
@@ -121,6 +121,10 @@ const verifyOcrDocument = async (documentKey, file) => {
 
   if (!(file.mimetype || "").startsWith("image/")) {
     return buildCheck("rejected", `${documentRules[documentKey].label}: format non pris en charge pour l'analyse automatique.`)
+  }
+
+  if (!OCR_ENABLED) {
+    return buildCheck("pending", `${documentRules[documentKey].label}: document recu. Verification manuelle requise.`)
   }
 
   if (documentKey === "idCardBack") {
