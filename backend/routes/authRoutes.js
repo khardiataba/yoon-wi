@@ -5,9 +5,38 @@ const crypto = require("crypto")
 const User = require("../models/User")
 const { authMiddleware } = require("../middleware/auth")
 const upload = require("../middleware/upload")
-const { runAutomaticVerification, decideAccountStatus } = require("../services/documentVerification")
 
 const router = express.Router()
+
+const BCRYPT_ROUNDS = Math.min(Math.max(Number(process.env.BCRYPT_ROUNDS) || 10, 10), 12)
+const LOGIN_USER_FIELDS = [
+  "_id",
+  "firstName",
+  "lastName",
+  "name",
+  "email",
+  "password",
+  "phone",
+  "role",
+  "status",
+  "reviewNote",
+  "safetyReportsCount",
+  "safetySuspendedAt",
+  "safetySuspensionReason",
+  "safetyLastReportAt",
+  "profilePhotoUrl",
+  "idCardUrl",
+  "idCardFrontUrl",
+  "idCardBackUrl",
+  "licenseUrl",
+  "registrationCardUrl",
+  "providerDetails",
+  "documentChecks"
+].join(" ")
+
+const asyncHandler = (handler) => (req, res, next) => {
+  Promise.resolve(handler(req, res, next)).catch(next)
+}
 
 const allowedSignupRoles = new Set(["client", "provider", "driver", "other", "technician", "server"])
 const allowedProviderCategories = new Set([
@@ -21,6 +50,7 @@ const allowedProviderCategories = new Set([
   "Coiffure & Beaute",
   "Restauration / Patisserie",
   "Livraison / Coursier",
+  "Coursier",
   "Autre service",
   "Assistant",
   "Traducteur",
@@ -35,6 +65,22 @@ const allowedProviderCategories = new Set([
 ])
 
 const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim())
+const normalizeEmail = (value) => String(value || "").trim().toLowerCase()
+const getPrimaryFrontendBaseUrl = () => {
+  const raw = String(process.env.FRONTEND_URL || "http://localhost:3000")
+  const first = raw
+    .split(",")
+    .map((entry) => entry.trim())
+    .find(Boolean)
+  return (first || "http://localhost:3000").replace(/\/+$/, "")
+}
+const buildEmailLookup = (value) => {
+  const rawEmail = String(value || "").trim()
+  const normalizedEmail = normalizeEmail(rawEmail)
+  const candidates = Array.from(new Set([normalizedEmail, rawEmail].filter(Boolean)))
+
+  return candidates.length === 1 ? { email: candidates[0] } : { email: { $in: candidates } }
+}
 const isStrongPassword = (value) => /^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(String(value || "").trim())
 const normalizeSenegalPhone = (value) => {
   const raw = String(value || "").trim()
@@ -86,7 +132,7 @@ const sanitizeProviderDetails = (details = {}) => ({
   vehicleType: String(details.vehicleType || "").trim(),
   vehiclePlate: String(details.vehiclePlate || "").trim().toUpperCase(),
   beautySpecialty: String(details.beautySpecialty || "").trim(),
-  otherServiceDetail: String(details.otherServiceDetail || "").trim(),
+  otherServiceDetail: String(details.otherServiceDetail || details.otherServiceName || "").trim(),
   hasProfessionalTools: Boolean(details.hasProfessionalTools)
 })
 
@@ -96,7 +142,7 @@ const validateSignupPayload = ({ firstName, lastName, email, password, phone, ro
   const normalizedRole = normalizeRole(cleanedRole)
   const cleanedFirstName = String(firstName || "").trim()
   const cleanedLastName = String(lastName || "").trim()
-  const cleanedEmail = String(email || "").trim()
+  const cleanedEmail = normalizeEmail(email)
   const cleanedPassword = String(password || "").trim()
   const cleanedPhone = normalizeSenegalPhone(phone)
   const normalizedProviderDetails = sanitizeProviderDetails(providerDetails)
@@ -157,7 +203,7 @@ const validateSignupPayload = ({ firstName, lastName, email, password, phone, ro
 
     if (deliveryServiceCategories.has(normalizedProviderDetails.serviceCategory)) {
       if (!normalizedProviderDetails.vehicleBrand || !normalizedProviderDetails.vehicleType || !normalizedProviderDetails.vehiclePlate) {
-      errors.push("Les prestataires de livraison doivent renseigner le vehicule et son immatriculation.")
+        errors.push("Les prestataires de livraison doivent renseigner le vehicule et son immatriculation.")
       }
 
       if (normalizedProviderDetails.vehiclePlate && !isValidPlate(normalizedProviderDetails.vehiclePlate)) {
@@ -236,8 +282,24 @@ const createToken = (user) => {
   )
 }
 
-router.post("/register", async (req, res) => {
-  try {
+const buildPendingDocumentChecks = (files = {}) => {
+  const nextChecks = {}
+  const documentKeys = ["profilePhoto", "idCardFront", "idCardBack", "license", "registrationCard"]
+
+  documentKeys.forEach((documentKey) => {
+    if (files[documentKey]?.[0]) {
+      nextChecks[documentKey] = {
+        status: "pending",
+        note: "Document recu. Validation admin requise.",
+        reviewedAt: null
+      }
+    }
+  })
+
+  return nextChecks
+}
+
+router.post("/register", asyncHandler(async (req, res) => {
     const { firstName, lastName, name, email, password, phone, role, providerDetails } = req.body
     if ((!firstName && !name) || !email || !password) {
       return res.status(400).json({ message: "Nom, email et mot de passe requis" })
@@ -263,12 +325,12 @@ router.post("/register", async (req, res) => {
 
     const normalizedRole = validation.normalizedRole
 
-    const existing = await User.findOne({ email: validation.cleanedEmail })
+    const existing = await User.exists(buildEmailLookup(validation.cleanedEmail))
     if (existing) {
       return res.status(400).json({ message: "Email déjà utilisé" })
     }
 
-    const hashed = await bcrypt.hash(validation.cleanedPassword, 10)
+    const hashed = await bcrypt.hash(validation.cleanedPassword, BCRYPT_ROUNDS)
 
     const user = await User.create({
       firstName: validation.cleanedFirstName,
@@ -284,25 +346,21 @@ router.post("/register", async (req, res) => {
 
     const token = createToken(user)
     return res.status(201).json({ user: serializeUser(user), token })
-  } catch (err) {
-    console.error(err)
-    return res.status(500).json({ message: "Erreur serveur" })
-  }
-})
+}))
 
-router.post("/login", async (req, res) => {
-  try {
+router.post("/login", asyncHandler(async (req, res) => {
     const { email, password } = req.body
     if (!email || !password) {
       return res.status(400).json({ message: "Email et mot de passe requis" })
     }
 
-    const user = await User.findOne({ email })
+    const normalizedEmail = normalizeEmail(email)
+    const user = await User.findOne(buildEmailLookup(email)).select(LOGIN_USER_FIELDS).lean()
     if (!user) {
       return res.status(400).json({ message: "Identifiants invalides" })
     }
 
-    const match = await bcrypt.compare(password, user.password)
+    const match = await bcrypt.compare(String(password), user.password)
     if (!match) {
       return res.status(400).json({ message: "Identifiants invalides" })
     }
@@ -317,11 +375,7 @@ router.post("/login", async (req, res) => {
 
     const token = createToken(user)
     return res.json({ user: serializeUser(user), token })
-  } catch (err) {
-    console.error(err)
-    return res.status(500).json({ message: "Erreur serveur" })
-  }
-})
+}))
 
 router.post("/forgot-password", async (req, res) => {
   try {
@@ -330,7 +384,8 @@ router.post("/forgot-password", async (req, res) => {
       return res.status(400).json({ message: "Email requis" })
     }
 
-    const user = await User.findOne({ email: String(email).toLowerCase().trim() })
+    const normalizedEmail = normalizeEmail(email)
+    const user = await User.exists(buildEmailLookup(email))
     if (!user) {
       // Don't reveal if email exists for security
       return res.json({ message: "Si l'email existe, un lien de réinitialisation a été envoyé" })
@@ -340,13 +395,19 @@ router.post("/forgot-password", async (req, res) => {
     const resetToken = crypto.randomBytes(32).toString('hex')
     const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex')
     
-    user.passwordResetToken = hashedToken
-    user.passwordResetExpires = new Date(Date.now() + 30 * 60 * 1000)
-    await user.save()
+    await User.updateOne(
+      { _id: user._id },
+      {
+        $set: {
+          passwordResetToken: hashedToken,
+          passwordResetExpires: new Date(Date.now() + 30 * 60 * 1000)
+        }
+      }
+    )
 
     // In production, send email here
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password/${resetToken}`
-    console.log(`[PASSWORD RESET] ${email}: ${resetUrl}`)
+    const resetUrl = `${getPrimaryFrontendBaseUrl()}/reset-password/${resetToken}`
+    console.log(`[PASSWORD RESET] ${normalizedEmail}: ${resetUrl}`)
 
     return res.json({ message: "Si l'email existe, un lien de réinitialisation a été envoyé" })
   } catch (err) {
@@ -380,7 +441,7 @@ router.post("/reset-password/:token", async (req, res) => {
     }
 
     // Update password
-    user.password = await bcrypt.hash(password, 10)
+    user.password = await bcrypt.hash(password, BCRYPT_ROUNDS)
     user.passwordResetToken = null
     user.passwordResetExpires = null
     user.lastPasswordChangeAt = new Date()
@@ -448,20 +509,16 @@ router.post("/upload-docs", authMiddleware,upload.fields([
         user.registrationCardUrl = `/uploads/${files.registrationCard[0].filename}`
       }
 
-      const automaticChecks = await runAutomaticVerification(files)
+      const pendingChecks = buildPendingDocumentChecks(files)
       user.documentChecks = {
         ...(user.documentChecks || {}),
-        ...automaticChecks
+        ...pendingChecks
       }
 
-      if (user.status === "needs_revision") {
+      if (["driver", "technician"].includes(user.role) && !["cancelled", "suspended"].includes(user.status)) {
         user.status = "pending"
       }
-      user.reviewNote = ""
-
-      const automaticDecision = decideAccountStatus(user)
-      user.status = automaticDecision.status
-      user.reviewNote = automaticDecision.reviewNote
+      user.reviewNote = "Documents recus. Validation admin requise."
 
       await user.save()
 

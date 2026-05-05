@@ -411,7 +411,7 @@ const Signup = () => {
 
                 <div>
                   <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.22em] text-[#70839a]">Mot de passe</label>
-                  <input value={password} onChange={(event) => { setPassword(event.target.value); clearFieldError("password") }} type="password" placeholder="Au moins 6 caracteres" required className="w-full rounded-2xl border border-[#c9d7e4] bg-[#f3f7fb] px-4 py-3 text-[#102c45] outline-none focus:border-[#1260a1]" />
+                  <input value={password} onChange={(event) => { setPassword(event.target.value); clearFieldError("password") }} type="password" placeholder="Au moins 8 caracteres (lettre + chiffre)" required className="w-full rounded-2xl border border-[#c9d7e4] bg-[#f3f7fb] px-4 py-3 text-[#102c45] outline-none focus:border-[#1260a1]" />
                   {errors.password && <div className="mt-2 text-sm text-[#c45860]">{errors.password}</div>}
                 </div>
 
@@ -594,7 +594,7 @@ const Signup = () => {
               <div className="mt-5 rounded-[30px] bg-[linear-gradient(180deg,#fff8ee_0%,#f8ebd8_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
                 <h2 className="font-['Sora'] text-xl font-bold text-[#16324f]">Documents de verification</h2>
                 <p className="mt-2 text-sm text-[#5f7894]">
-                  Envoyez des photos nettes et bien cadrees. Le systeme verifiera automatiquement vos pieces puis activera ou corrigera le dossier.
+                  Envoyez des photos nettes et bien cadrees. L'administration verifiera vos pieces avant validation du dossier.
                 </p>
 
                 <div className="mt-5 rounded-[24px] bg-white/80 px-4 py-4 shadow-[0_12px_24px_rgba(112,79,34,0.08)]">

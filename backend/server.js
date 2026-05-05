@@ -28,9 +28,16 @@ const server = http.createServer(app)
 // Initialize Socket.io
 socketManager.initialize(server)
 
+const DEFAULT_ALLOWED_ORIGINS = [
+  "https://ndar-express-eezj.vercel.app",
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://localhost:5174"
+]
+
 const normalizeOrigin = (value) => String(value || "").trim().replace(/\/+$/, "")
 const buildAllowedOrigins = () =>
-  String(process.env.FRONTEND_URL || "")
+  String(process.env.FRONTEND_URL || DEFAULT_ALLOWED_ORIGINS.join(","))
     .split(",")
     .map((origin) => normalizeOrigin(origin))
     .filter(Boolean)
@@ -38,10 +45,6 @@ const buildAllowedOrigins = () =>
 const isOriginAllowed = (origin, allowedOrigins) => {
   if (!origin) return true
   const normalizedOrigin = normalizeOrigin(origin)
-
-  if (allowedOrigins.length === 0) {
-    return true
-  }
 
   return allowedOrigins.some((allowed) => {
     if (allowed.includes("*")) {
@@ -84,19 +87,29 @@ const generalLimiter = rateLimit({
 })
 
 const allowedOrigins = buildAllowedOrigins()
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (isOriginAllowed(origin, allowedOrigins)) {
-        callback(null, true)
-        return
-      }
-      callback(new Error(`CORS origin not allowed: ${origin}`))
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (isOriginAllowed(origin, allowedOrigins)) {
+      callback(null, true)
+      return
     }
-  })
+
+    const error = new Error("Origine CORS non autorisee")
+    error.status = 403
+    callback(error)
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  optionsSuccessStatus: 204
+}
+
+app.use(
+  cors(corsOptions)
 )
-app.use(express.json({ limit: '10mb' }))
-app.use(express.urlencoded({ limit: '10mb', extended: true }))
+app.options(/.*/, cors(corsOptions))
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || "100kb" }))
+app.use(express.urlencoded({ limit: process.env.URLENCODED_BODY_LIMIT || "100kb", extended: true }))
 app.use(generalLimiter)
 
 // Health Check Route
@@ -134,10 +147,25 @@ app.use("/api", (req, res) => {
 })
 
 app.use((err, req, res, next) => {
-  console.error("Erreur non gérée:", err)
   if (res.headersSent) return next(err)
-  return res.status(err.status || 500).json({
-    message: err.message || "Erreur interne du serveur"
+
+  const status = err.status || err.statusCode || 500
+  if (err.type === "entity.too.large") {
+    return res.status(413).json({ message: "Requete trop volumineuse" })
+  }
+
+  if (err instanceof SyntaxError && "body" in err) {
+    return res.status(400).json({ message: "JSON invalide" })
+  }
+
+  if (status >= 500) {
+    console.error("Erreur serveur:", err.message)
+  } else if (process.env.NODE_ENV !== "production") {
+    console.warn("Requete refusee:", err.message)
+  }
+
+  return res.status(status).json({
+    message: status >= 500 ? "Erreur interne du serveur" : err.message
   })
 })
 
@@ -155,7 +183,18 @@ const startServer = async () => {
   }
 
   try {
-    await mongoose.connect(process.env.MONGO_URI)
+    mongoose.set("strictQuery", true)
+    mongoose.set("bufferCommands", false)
+
+    await mongoose.connect(process.env.MONGO_URI, {
+      maxPoolSize: Number(process.env.MONGO_MAX_POOL_SIZE) || 5,
+      minPoolSize: 0,
+      serverSelectionTimeoutMS: 10000,
+      socketTimeoutMS: 30000,
+      connectTimeoutMS: 10000,
+      maxIdleTimeMS: 30000,
+      autoIndex: process.env.NODE_ENV !== "production"
+    })
     console.log("MongoDB connecté")
 
     server.listen(PORT, () => {
@@ -168,4 +207,24 @@ const startServer = async () => {
 }
 
 startServer()
+
+process.on("unhandledRejection", (reason) => {
+  console.error("Promesse non geree:", reason?.message || reason)
+})
+
+process.on("uncaughtException", (err) => {
+  console.error("Exception non geree:", err.message)
+  process.exit(1)
+})
+
+const shutdown = async (signal) => {
+  console.log(`${signal} recu, arret propre du serveur`)
+  server.close(async () => {
+    await mongoose.connection.close(false)
+    process.exit(0)
+  })
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"))
+process.on("SIGINT", () => shutdown("SIGINT"))
 
