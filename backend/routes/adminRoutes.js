@@ -1,9 +1,9 @@
 const express = require("express")
 const User = require("../models/User")
-const ServiceRequest = require("../models/ServiceRequest")
 const { authMiddleware, requireRole } = require("../middleware/auth")
 
 const router = express.Router()
+const COMMISSION_PAYMENT_NUMBER = "781488070"
 
 const getRequiredDocuments = (user) => {
   const serviceCategory = String(user?.providerDetails?.serviceCategory || "").trim()
@@ -181,20 +181,61 @@ router.patch("/users/:id/cancel",authMiddleware,requireRole("admin"),async (req,
 )
 
 router.get(
-  "/services/contributions",
+  "/commission-credits",
   authMiddleware,
   requireRole("admin"),
   async (req, res) => {
     try {
-      const { status } = req.query
-      const filter = {}
+      const users = await User.find({ role: { $in: ["driver", "technician", "server"] } })
+        .select("firstName lastName name email phone role status commissionCreditBalance commissionCreditUpdatedAt")
+        .sort({ commissionCreditUpdatedAt: -1, name: 1 })
 
-      if (status && ["due", "paid", "refunded"].includes(status)) {
-        filter.platformContributionStatus = status
+      return res.json({
+        paymentNumber: COMMISSION_PAYMENT_NUMBER,
+        users
+      })
+    } catch (err) {
+      console.error(err)
+      return res.status(500).json({ message: "Erreur serveur" })
+    }
+  }
+)
+
+router.patch(
+  "/users/:id/commission-credit",
+  authMiddleware,
+  requireRole("admin"),
+  async (req, res) => {
+    try {
+      const amount = Math.round(Number(req.body?.amount))
+      const mode = String(req.body?.mode || "add").trim()
+      const note = String(req.body?.note || "").trim()
+
+      if (!Number.isFinite(amount) || amount <= 0) {
+        return res.status(400).json({ message: "Montant de recharge invalide" })
       }
 
-      const serviceContributions = await ServiceRequest.find(filter).sort({ createdAt: -1 })
-      return res.json(serviceContributions)
+      if (!["add", "set"].includes(mode)) {
+        return res.status(400).json({ message: "Mode invalide" })
+      }
+
+      const user = await User.findById(req.params.id)
+      if (!user || !["driver", "technician", "server"].includes(user.role)) {
+        return res.status(404).json({ message: "Prestataire introuvable" })
+      }
+
+      const previousBalance = Math.round(Number(user.commissionCreditBalance || 0))
+      user.commissionCreditBalance = mode === "set" ? amount : previousBalance + amount
+      user.commissionCreditUpdatedAt = new Date()
+      await user.save()
+
+      return res.json({
+        message: "Credit commission mis a jour",
+        userId: user._id,
+        previousBalance,
+        newBalance: user.commissionCreditBalance,
+        note
+      })
     } catch (err) {
       console.error(err)
       return res.status(500).json({ message: "Erreur serveur" })

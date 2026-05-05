@@ -26,22 +26,23 @@ const getBackendOrigin = () => {
 
 const AdminDashboard = () => {
   const [pendingUsers, setPendingUsers] = useState([])
-  const [serviceContributions, setServiceContributions] = useState([])
+  const [commissionCredits, setCommissionCredits] = useState({ paymentNumber: "781488070", users: [] })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [savingDocumentKey, setSavingDocumentKey] = useState("")
   const [reviewNotes, setReviewNotes] = useState({})
+  const [creditDrafts, setCreditDrafts] = useState({})
 
   const fetchPending = async () => {
     try {
       setLoading(true)
       setError(null)
-      const [usersRes, servicesRes] = await Promise.all([
+      const [usersRes, creditsRes] = await Promise.all([
         api.get("/admin/users/pending"),
-        api.get("/admin/services/contributions")
+        api.get("/admin/commission-credits")
       ])
       setPendingUsers(usersRes.data)
-      setServiceContributions(Array.isArray(servicesRes.data) ? servicesRes.data : [])
+      setCommissionCredits(creditsRes.data || { paymentNumber: "781488070", users: [] })
     } catch (err) {
       setError(err.response?.data?.message || "Erreur de chargement")
     } finally {
@@ -102,6 +103,26 @@ const AdminDashboard = () => {
     }
   }
 
+  const updateCreditDraft = (userId, value) => {
+    setCreditDrafts((current) => ({ ...current, [userId]: value }))
+  }
+
+  const validateCommissionCredit = async (userId) => {
+    try {
+      setError(null)
+      const amount = Number(creditDrafts[userId] || 0)
+      await api.patch(`/admin/users/${userId}/commission-credit`, {
+        amount,
+        mode: "add",
+        note: "Recharge Wave/Orange Money validée manuellement"
+      })
+      setCreditDrafts((current) => ({ ...current, [userId]: "" }))
+      fetchPending()
+    } catch (err) {
+      setError(err.response?.data?.message || "Impossible de créditer ce compte")
+    }
+  }
+
   useEffect(() => {
     fetchPending()
   }, [])
@@ -113,36 +134,44 @@ const AdminDashboard = () => {
       <div className="ndar-shell space-y-4">
         <header className="ndar-card rounded-[34px] p-6">
           <div className="font-['Sora'] text-3xl font-extrabold text-[#16324f]">Validation des dossiers</div>
-          <p className="mt-2 text-sm text-[#5a8fd1]">Analysez les reponses, les documents et validez les chauffeurs ou prestataires.</p>
+          <p className="mt-2 text-sm text-[#5a8fd1]">Analysez les documents, validez les chauffeurs/prestataires et créditez les comptes après paiement Wave ou Orange Money.</p>
         </header>
 
         <section className="ndar-card rounded-[34px] p-5">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="font-['Sora'] text-xl font-bold text-[#16324f]">Contributions services</h2>
-              <p className="text-sm text-[#5a8fd1]">Suivi des contributions obligatoires de 10% pour les services.</p>
-            </div>
-            <div className="rounded-full bg-[#edf5fb] px-3 py-2 text-xs font-bold text-[#165c96]">
-              {serviceContributions.filter((item) => item.platformContributionStatus === "due").length} dues
+              <h2 className="font-['Sora'] text-xl font-bold text-[#16324f]">Crédits commission chauffeurs/prestataires</h2>
+              <p className="text-sm text-[#5a8fd1]">Après réception Wave ou Orange Money au {commissionCredits.paymentNumber}, ajoutez le montant ici.</p>
             </div>
           </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-[22px] bg-[#f8fbff] p-4">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5a8fd1]">Total demandes</div>
-              <div className="mt-2 font-['Sora'] text-2xl font-bold text-[#16324f]">{serviceContributions.length}</div>
-            </div>
-            <div className="rounded-[22px] bg-[#eefaf2] p-4">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#4e8a67]">Payées</div>
-              <div className="mt-2 font-['Sora'] text-2xl font-bold text-[#178b55]">
-                {serviceContributions.filter((item) => item.platformContributionStatus === "paid").length}
-              </div>
-            </div>
-            <div className="rounded-[22px] bg-[#fff8ea] p-4">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9a7a24]">Dues</div>
-              <div className="mt-2 font-['Sora'] text-2xl font-bold text-[#9a7a24]">
-                {serviceContributions.filter((item) => item.platformContributionStatus === "due").length}
-              </div>
-            </div>
+          <div className="mt-4 space-y-3">
+            {(commissionCredits.users || []).length === 0 ? (
+              <div className="rounded-[24px] bg-[#f8fbff] px-5 py-6 text-sm text-[#5a8fd1]">Aucun chauffeur ou prestataire.</div>
+            ) : (
+              (commissionCredits.users || []).slice(0, 10).map((item) => (
+                <div key={item._id} className="grid gap-3 rounded-[22px] border border-[#e2eaf2] bg-white p-4 sm:grid-cols-[1fr_auto_auto] sm:items-center">
+                  <div>
+                    <div className="font-semibold text-[#16324f]">{item.name || `${item.firstName || ""} ${item.lastName || ""}`.trim()}</div>
+                    <div className="mt-1 text-xs text-[#5a8fd1]">{item.role} • {item.phone || item.email}</div>
+                    <div className="mt-1 text-sm font-bold text-[#9a7a24]">Solde: {Number(item.commissionCreditBalance || 0).toLocaleString()} F</div>
+                  </div>
+                  <input
+                    value={creditDrafts[item._id] || ""}
+                    onChange={(event) => updateCreditDraft(item._id, event.target.value)}
+                    type="number"
+                    min="0"
+                    placeholder="Montant reçu"
+                    className="rounded-2xl border border-[#dce7f0] bg-white px-4 py-3 text-sm outline-none focus:border-[#1260a1]"
+                  />
+                  <button
+                    onClick={() => validateCommissionCredit(item._id)}
+                    className="rounded-2xl bg-[#165c96] px-4 py-3 text-sm font-bold text-white"
+                  >
+                    Valider recharge
+                  </button>
+                </div>
+              ))
+            )}
           </div>
         </section>
 
@@ -154,44 +183,6 @@ const AdminDashboard = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            <section className="ndar-card rounded-[30px] p-5">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div>
-                  <h2 className="font-['Sora'] text-xl font-bold text-[#16324f]">Dernières contributions</h2>
-                  <p className="text-sm text-[#5a8fd1]">Vérifiez rapidement les demandes de service et leur statut de paiement.</p>
-                </div>
-                <span className="rounded-full bg-[#edf5fb] px-3 py-2 text-xs font-bold text-[#165c96]">Admin</span>
-              </div>
-
-              {serviceContributions.length === 0 ? (
-                <div className="rounded-[24px] bg-[#f8fbff] px-5 py-6 text-sm text-[#5a8fd1]">Aucune contribution enregistrée.</div>
-              ) : (
-                <div className="space-y-3">
-                  {serviceContributions.slice(0, 8).map((item) => (
-                    <div key={item._id} className="rounded-[24px] border border-[#e2eaf2] bg-white p-4 shadow-sm">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <div className="font-semibold text-[#16324f]">{item.title || item.category}</div>
-                          <div className="mt-1 text-sm text-[#5a8fd1]">{item.description}</div>
-                          <div className="mt-2 text-xs text-[#5a8fd1]">
-                            Client: {item.clientId} • Prestataire: {item.technicianId || "en attente"}
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="rounded-full bg-[#f8fbff] px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-[#165c96]">
-                            {item.platformContributionStatus || "due"}
-                          </div>
-                          <div className="mt-2 font-['Sora'] text-xl font-bold text-[#16324f]">
-                            {Number(item.appCommissionAmount || 0).toLocaleString()} F
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-
             {pendingUsers.length === 0 ? (
               <div className="ndar-card rounded-[30px] p-6 text-sm text-[#5a8fd1]">Aucun compte en attente.</div>
             ) : (

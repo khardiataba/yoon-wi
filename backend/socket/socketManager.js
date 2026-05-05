@@ -5,10 +5,17 @@ const User = require('../models/User');
 const Ride = require('../models/Ride');
 const { validateLocation } = require('../utils/locationValidation');
 
+const DEFAULT_ALLOWED_ORIGINS = [
+  'https://ndar-express-eezj.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://localhost:5174'
+];
+
 const normalizeOrigin = (value) => String(value || '').trim().replace(/\/+$/, '');
 
 const buildAllowedOrigins = () => {
-  const raw = String(process.env.FRONTEND_URL || '');
+  const raw = String(process.env.FRONTEND_URL || DEFAULT_ALLOWED_ORIGINS.join(','));
   return raw
     .split(',')
     .map((origin) => normalizeOrigin(origin))
@@ -18,10 +25,6 @@ const buildAllowedOrigins = () => {
 const isOriginAllowed = (origin, allowedOrigins) => {
   if (!origin) return true; // mobile/webviews or non-browser clients
   const normalizedOrigin = normalizeOrigin(origin);
-
-  if (allowedOrigins.length === 0) {
-    return true;
-  }
 
   return allowedOrigins.some((allowed) => {
     if (allowed.includes('*')) {
@@ -73,7 +76,7 @@ class SocketManager {
       }
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await User.findById(decoded.id);
+      const user = await User.findById(decoded.id).select('_id role status firstName lastName name').lean();
 
       if (!user) {
         return next(new Error('User not found'));
@@ -81,7 +84,11 @@ class SocketManager {
 
       socket.userId = user._id;
       socket.userRole = user.role;
-      socket.userData = user;
+      socket.userData = {
+        id: user._id,
+        role: user.role,
+        status: user.status
+      };
 
       next();
     } catch (error) {
@@ -184,7 +191,6 @@ class SocketManager {
     if (!rideId) return;
 
     try {
-      const Ride = require('../models/Ride');
       const ride = await Ride.findById(rideId);
 
       if (!ride) return;
@@ -404,6 +410,36 @@ class SocketManager {
     } catch (error) {
       console.error('Erreur notification participants:', error)
     }
+  }
+
+  emitNewRideRequest(ride, pickupLocation, vehicleType = null) {
+    if (!ride || !pickupLocation) return
+
+    const availableDrivers = this.findAvailableDrivers(pickupLocation, vehicleType)
+    const payload = {
+      rideId: ride._id,
+      _id: ride._id,
+      status: ride.status,
+      driverAvailabilityStatus: ride.driverAvailabilityStatus,
+      pickup: ride.pickup,
+      vehicleType: ride.vehicleType,
+      rideCategory: ride.rideCategory,
+      busZone: ride.busZone,
+      distanceKm: ride.distanceKm,
+      durationMin: ride.durationMin,
+      price: ride.price,
+      appCommissionPercent: ride.appCommissionPercent,
+      appCommissionAmount: ride.appCommissionAmount,
+      providerNetAmount: ride.providerNetAmount,
+      createdAt: ride.createdAt
+    }
+
+    availableDrivers.forEach((driver) => {
+      const driverSocket = this.io?.sockets?.sockets?.get(driver.socketId)
+      if (driverSocket) {
+        driverSocket.emit('ride:new-request', payload)
+      }
+    })
   }
 
   // Utility methods for external use

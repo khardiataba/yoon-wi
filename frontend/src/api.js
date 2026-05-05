@@ -158,6 +158,9 @@ export const mapsAPI = {
   searchPlaces: (query, lat, lng, radius) =>
     api.get('/maps/places', { params: { query, lat, lng, radius } }),
 
+  autocompletePlaces: (input, lat, lng, radius) =>
+    api.get('/maps/places/autocomplete', { params: { input, lat, lng, radius } }),
+
   // Calculer le prix d'une course
   calculatePrice: (distanceKm, durationMin, surgeMultiplier, vehicleType) =>
     api.post('/maps/calculate-price', { distanceKm, durationMin, surgeMultiplier, vehicleType }),

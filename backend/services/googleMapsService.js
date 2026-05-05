@@ -5,6 +5,43 @@ class GoogleMapsService {
   constructor() {
     this.apiKey = process.env.GOOGLE_MAPS_API_KEY;
     this.baseUrl = 'https://maps.googleapis.com/maps/api';
+    this.osmBaseUrl = 'https://nominatim.openstreetmap.org';
+  }
+
+  hasGoogleKey() {
+    return Boolean(String(this.apiKey || '').trim());
+  }
+
+  async osmSearch(query, limit = 6) {
+    const params = new URLSearchParams({
+      q: `${query}, Senegal`,
+      format: 'jsonv2',
+      addressdetails: '1',
+      limit: String(limit),
+      countrycodes: 'sn',
+      'accept-language': 'fr'
+    });
+
+    const response = await axios.get(`${this.osmBaseUrl}/search?${params}`, {
+      headers: { 'User-Agent': 'YOON-WI/1.0 address search' },
+      timeout: 12000
+    });
+
+    return Array.isArray(response.data) ? response.data : [];
+  }
+
+  mapOsmPlace(place) {
+    return {
+      id: String(place.place_id || place.osm_id || place.display_name),
+      placeId: String(place.place_id || place.osm_id || ''),
+      name: place.name || place.address?.road || place.address?.neighbourhood || place.address?.suburb || place.address?.city || place.display_name,
+      address: place.display_name,
+      location: {
+        lat: Number(place.lat),
+        lng: Number(place.lon)
+      },
+      types: [place.type, place.class].filter(Boolean)
+    };
   }
 
   /**
@@ -117,6 +154,29 @@ class GoogleMapsService {
    */
   async reverseGeocode(lat, lng) {
     try {
+      if (!this.hasGoogleKey()) {
+        const params = new URLSearchParams({
+          lat: String(lat),
+          lon: String(lng),
+          format: 'jsonv2',
+          addressdetails: '1',
+          'accept-language': 'fr'
+        });
+        const response = await axios.get(`${this.osmBaseUrl}/reverse?${params}`, {
+          headers: { 'User-Agent': 'YOON-WI/1.0 reverse geocoding' },
+          timeout: 12000
+        });
+        const result = response.data || {};
+        const components = result.address || {};
+        return {
+          success: true,
+          address: result.display_name || `${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`,
+          name: components.road || components.neighbourhood || components.suburb || components.city || 'Lieu identifié',
+          components,
+          placeId: String(result.place_id || result.osm_id || '')
+        };
+      }
+
       const params = new URLSearchParams({
         latlng: `${lat},${lng}`,
         key: this.apiKey,
@@ -130,10 +190,13 @@ class GoogleMapsService {
       }
 
       const result = response.data.results[0];
+      const components = this.parseAddressComponents(result.address_components);
+      const name = this.getReadablePlaceName(result, components);
       return {
         success: true,
         address: result.formatted_address,
-        components: this.parseAddressComponents(result.address_components),
+        name,
+        components,
         placeId: result.place_id
       };
     } catch (error) {
@@ -150,8 +213,22 @@ class GoogleMapsService {
    */
   async geocodeAddress(address) {
     try {
+      if (!this.hasGoogleKey()) {
+        const places = await this.osmSearch(address, 1);
+        if (!places.length) {
+          throw new Error('Adresse introuvable');
+        }
+        const place = this.mapOsmPlace(places[0]);
+        return {
+          success: true,
+          location: place.location,
+          address: place.address,
+          placeId: place.placeId
+        };
+      }
+
       const params = new URLSearchParams({
-        address: encodeURIComponent(address),
+        address,
         key: this.apiKey,
         language: 'fr'
       });
@@ -186,8 +263,16 @@ class GoogleMapsService {
    */
   async searchPlaces(query, location, radius = 5000) {
     try {
+      if (!this.hasGoogleKey()) {
+        const places = await this.osmSearch(query, 6);
+        return {
+          success: true,
+          places: places.map((place) => this.mapOsmPlace(place)).filter((place) => Number.isFinite(place.location.lat) && Number.isFinite(place.location.lng))
+        };
+      }
+
       const params = new URLSearchParams({
-        query: encodeURIComponent(query),
+        query,
         location: `${location.lat},${location.lng}`,
         radius: radius.toString(),
         key: this.apiKey,
@@ -228,6 +313,86 @@ class GoogleMapsService {
     }
   }
 
+  async autocompletePlaces(input, location, radius = 12000) {
+    try {
+      if (!this.hasGoogleKey()) {
+        const places = await this.osmSearch(input, 6);
+        return {
+          success: true,
+          places: places.map((place) => this.mapOsmPlace(place)).filter((place) => Number.isFinite(place.location.lat) && Number.isFinite(place.location.lng))
+        };
+      }
+
+      const params = new URLSearchParams({
+        input,
+        key: this.apiKey,
+        language: 'fr',
+        components: 'country:sn',
+        radius: radius.toString()
+      });
+
+      if (location?.lat && location?.lng) {
+        params.set('location', `${location.lat},${location.lng}`);
+      }
+
+      const response = await axios.get(`${this.baseUrl}/place/autocomplete/json?${params}`);
+
+      if (!['OK', 'ZERO_RESULTS'].includes(response.data.status)) {
+        throw new Error(`Places Autocomplete API error: ${response.data.status}`);
+      }
+
+      const predictions = response.data.predictions || [];
+      const places = await Promise.all(
+        predictions.slice(0, 6).map(async (prediction) => {
+          const details = await this.getPlaceDetails(prediction.place_id);
+          return {
+            id: prediction.place_id,
+            placeId: prediction.place_id,
+            name: prediction.structured_formatting?.main_text || prediction.description,
+            address: prediction.description,
+            location: details.location,
+            types: prediction.types || []
+          };
+        })
+      );
+
+      return { success: true, places: places.filter((place) => place.location) };
+    } catch (error) {
+      console.error('Erreur autocompletion lieux:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  async getPlaceDetails(placeId) {
+    const params = new URLSearchParams({
+      place_id: placeId,
+      key: this.apiKey,
+      language: 'fr',
+      fields: 'geometry,formatted_address,name'
+    });
+
+    const response = await axios.get(`${this.baseUrl}/place/details/json?${params}`);
+
+    if (response.data.status !== 'OK') {
+      return { location: null };
+    }
+
+    const result = response.data.result;
+    return {
+      location: result?.geometry?.location
+        ? {
+            lat: result.geometry.location.lat,
+            lng: result.geometry.location.lng
+          }
+        : null,
+      address: result?.formatted_address,
+      name: result?.name
+    };
+  }
+
   /**
    * Parser les composants d'adresse
    */
@@ -246,6 +411,9 @@ class GoogleMapsService {
       if (types.includes('locality')) {
         parsed.city = component.long_name;
       }
+      if (types.includes('sublocality') || types.includes('neighborhood')) {
+        parsed.neighborhood = component.long_name;
+      }
       if (types.includes('administrative_area_level_1')) {
         parsed.region = component.long_name;
       }
@@ -259,6 +427,17 @@ class GoogleMapsService {
     });
 
     return parsed;
+  }
+
+  getReadablePlaceName(result, components) {
+    const candidate =
+      result.name ||
+      components.neighborhood ||
+      components.street ||
+      components.city ||
+      result.formatted_address?.split(',')?.[0];
+
+    return candidate ? `Près de ${candidate}` : 'Lieu identifié';
   }
 
   /**

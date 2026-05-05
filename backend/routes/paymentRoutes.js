@@ -6,6 +6,23 @@ const atomicPaymentService = require('../services/atomicPaymentService')
 const { authMiddleware } = require('../middleware/auth')
 const { rideCommission } = require('../utils/pricing')
 
+const COMMISSION_PAYMENT_NUMBER = '781488070'
+
+router.get('/commission-credit', authMiddleware, async (req, res) => {
+  try {
+    return res.json({
+      balance: Math.round(Number(req.user?.commissionCreditBalance || 0)),
+      currency: 'XOF',
+      paymentNumber: COMMISSION_PAYMENT_NUMBER,
+      methods: ['Wave', 'Orange Money'],
+      instructions: `Rechargez par Wave ou Orange Money au ${COMMISSION_PAYMENT_NUMBER}. L'admin valide ensuite le transfert et crédite votre compte.`
+    })
+  } catch (error) {
+    console.error('Erreur route commission credit:', error)
+    res.status(500).json({ message: 'Erreur serveur' })
+  }
+})
+
 // Obtenir le solde du wallet
 router.get('/wallet/balance', authMiddleware, async (req, res) => {
   try {

@@ -1,4 +1,5 @@
 import React, { useState } from "react"
+import { resolveMediaUrl } from "../utils/mediaUrl"
 
 const GalleryViewer = ({ items = [], providerName = "Service Provider" }) => {
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -55,14 +56,14 @@ const GalleryViewer = ({ items = [], providerName = "Service Provider" }) => {
             <div className="w-full h-full flex">
               {/* Before Image */}
               <div className="w-1/2 relative">
-                <img src={currentItem.beforeAfter.beforeUrl} alt="Avant" className="w-full h-full object-cover" />
+                <img src={resolveMediaUrl(currentItem.beforeAfter.beforeUrl)} alt="Avant" className="w-full h-full object-cover" />
                 <div className="absolute top-2 left-2 bg-red-500 text-white px-3 py-1 rounded text-sm font-semibold">
                   Avant
                 </div>
               </div>
               {/* After Image */}
               <div className="w-1/2 relative">
-                <img src={currentItem.beforeAfter.afterUrl} alt="Après" className="w-full h-full object-cover" />
+                <img src={resolveMediaUrl(currentItem.beforeAfter.afterUrl)} alt="Après" className="w-full h-full object-cover" />
                 <div className="absolute top-2 right-2 bg-green-500 text-white px-3 py-1 rounded text-sm font-semibold">
                   Après
                 </div>
@@ -71,9 +72,9 @@ const GalleryViewer = ({ items = [], providerName = "Service Provider" }) => {
           ) : (
             <>
               {(currentItem.mediaType === "video" || currentItem.videoUrl) ? (
-                <video src={currentItem.videoUrl} className="w-full h-full object-cover" controls playsInline />
+                <video src={resolveMediaUrl(currentItem.videoUrl)} className="w-full h-full object-cover" controls playsInline />
               ) : (
-                <img src={currentItem.imageUrl} alt={currentItem.title} className="w-full h-full object-cover" />
+                <img src={resolveMediaUrl(currentItem.imageUrl)} alt={currentItem.title} className="w-full h-full object-cover" />
               )}
             </>
           )}
@@ -166,7 +167,7 @@ const GalleryViewer = ({ items = [], providerName = "Service Provider" }) => {
                   <div className="flex h-full w-full items-center justify-center bg-gray-800 text-xs font-semibold text-white">Video</div>
                 ) : (
                   <img
-                    src={item.thumbnailUrl || item.imageUrl}
+                    src={resolveMediaUrl(item.thumbnailUrl || item.imageUrl)}
                     alt={`Thumbnail ${idx + 1}`}
                     className="w-full h-full object-cover"
                   />

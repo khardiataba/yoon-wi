@@ -36,6 +36,22 @@ const serviceReportSchema = new mongoose.Schema(
   { _id: false }
 )
 
+const ratingSchema = new mongoose.Schema(
+  {
+    raterId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    ratedId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    rating: { type: Number, min: 1, max: 5, required: true },
+    comment: { type: String, default: "" },
+    type: {
+      type: String,
+      enum: ["client-to-provider", "provider-to-client"],
+      required: true
+    },
+    createdAt: { type: Date, default: Date.now }
+  },
+  { _id: true }
+)
+
 const ServiceRequestSchema = new mongoose.Schema(
   {
     clientId: { type: String, required: true },
@@ -64,10 +80,12 @@ const ServiceRequestSchema = new mongoose.Schema(
     quoteAcceptedAt: { type: Date, default: null },
     appCommissionPercent: { type: Number, default: 10 },
     appCommissionAmount: { type: Number, default: 0 },
+    appCommissionDebitedAt: { type: Date, default: null },
     providerNetAmount: { type: Number, default: 0 },
     safetyCode: { type: String, default: null, select: false },
     safetyCodeVerifiedAt: { type: Date, default: null },
     safetyReports: { type: [serviceReportSchema], default: [] },
+    ratings: { type: [ratingSchema], default: [] },
     platformContributionStatus: {
       type: String,
       enum: ["due", "paid", "refunded"],

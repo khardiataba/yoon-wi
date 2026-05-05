@@ -117,6 +117,31 @@ router.get('/places', authMiddleware, async (req, res) => {
   }
 });
 
+router.get('/places/autocomplete', authMiddleware, async (req, res) => {
+  try {
+    const { input, query, lat, lng, radius } = req.query;
+    const searchText = input || query;
+
+    if (!searchText || String(searchText).trim().length < 3) {
+      return res.status(400).json({ message: 'Saisissez au moins 3 caractères' });
+    }
+
+    const location = lat && lng ? { lat: parseFloat(lat), lng: parseFloat(lng) } : null;
+    const searchRadius = radius ? parseInt(radius) : 12000;
+
+    const result = await googleMapsService.autocompletePlaces(searchText, location, searchRadius);
+
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (error) {
+    console.error('Erreur route autocompletion lieux:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
 // Calculer le prix d'une course
 router.post('/calculate-price', authMiddleware, async (req, res) => {
   try {

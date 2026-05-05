@@ -54,6 +54,22 @@ const busOptionsSchema = new mongoose.Schema(
   { _id: false }
 )
 
+const ratingSchema = new mongoose.Schema(
+  {
+    raterId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    ratedId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    rating: { type: Number, min: 1, max: 5, required: true },
+    comment: { type: String, default: "" },
+    type: {
+      type: String,
+      enum: ["passenger-to-driver", "driver-to-passenger"],
+      required: true
+    },
+    createdAt: { type: Date, default: Date.now }
+  },
+  { _id: true }
+)
+
 const rideSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   driverId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
@@ -77,6 +93,7 @@ const rideSchema = new mongoose.Schema({
   price: { type: Number, required: true },
   appCommissionPercent: { type: Number, default: 10 },
   appCommissionAmount: { type: Number, default: 0 },
+  appCommissionDebitedAt: { type: Date, default: null },
   providerNetAmount: { type: Number, default: 0 },
   vehicleType: { type: String, default: "YOONWI Classic" },
   rideCategory: {
@@ -105,6 +122,7 @@ const rideSchema = new mongoose.Schema({
   safetyCode: { type: String, default: null, select: false },
   safetyCodeVerifiedAt: { type: Date, default: null },
   safetyReports: { type: [safetyReportSchema], default: [] },
+  ratings: { type: [ratingSchema], default: [] },
   createdAt: { type: Date, default: Date.now }
 })
 

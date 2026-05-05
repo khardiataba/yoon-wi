@@ -6,7 +6,6 @@ const User = require("../models/User")
 const ProviderGallery = require("../models/ProviderGallery")
 const { authMiddleware, requireRole, requireVerified } = require("../middleware/auth")
 const { APP_COMMISSION_PERCENT, serviceCommission } = require("../utils/pricing")
-const { createCheckoutSession, getStripeConfig } = require("../utils/stripePayments")
 
 const router = express.Router()
 
@@ -143,6 +142,8 @@ const collectProviderKeywords = (provider) => {
   const family = getProviderFamily(provider)
   const familyAliases = providerAliasGroups[family] || []
   const categoryAliases = providerAliasByCategory[serviceCategory] || []
+  const portfolioOfferings = Array.isArray(provider?.portfolio?.offerings) ? provider.portfolio.offerings : []
+  const portfolioPreviewItems = Array.isArray(provider?.portfolio?.previewItems) ? provider.portfolio.previewItems : []
   const values = [
     provider?.name,
     provider?.firstName,
@@ -154,6 +155,13 @@ const collectProviderKeywords = (provider) => {
     provider?.providerDetails?.availability,
     provider?.providerDetails?.beautySpecialty,
     provider?.providerDetails?.otherServiceDetail,
+    ...portfolioOfferings.flatMap((item) => [item.title, item.description, item.unit]),
+    ...portfolioPreviewItems.flatMap((item) => [
+      item.title,
+      item.description,
+      item.category,
+      ...(Array.isArray(item.tags) ? item.tags : [])
+    ]),
     ...familyAliases,
     ...categoryAliases
   ]
@@ -421,6 +429,20 @@ const applyQuotedPrice = (request, quotedPrice) => {
   request.appCommissionAmount = commission.appCommissionAmount
   request.providerNetAmount = commission.providerNetAmount
   return request
+}
+
+const getProviderCommissionBalance = (user) => Math.round(Number(user?.commissionCreditBalance || 0))
+
+const ensurePositiveCommissionCredit = (user) => {
+  const balance = getProviderCommissionBalance(user)
+  if (balance <= 0) {
+    return {
+      ok: false,
+      balance,
+      message: "Credit commission insuffisant. Rechargez par Wave ou Orange Money au 781488070, puis attendez la validation admin."
+    }
+  }
+  return { ok: true, balance }
 }
 
 const buildParticipantSummary = (user) => {
@@ -764,6 +786,11 @@ router.patch( "/:id/accept", authMiddleware,requireVerified,requireRole(["techni
         return res.status(400).json({ message: "Demande non disponible" })
       }
 
+      const creditStatus = ensurePositiveCommissionCredit(req.user)
+      if (!creditStatus.ok) {
+        return res.status(402).json(creditStatus)
+      }
+
       const quotedPrice = Number(req.body?.quotedPrice)
       if (!Number.isFinite(quotedPrice) || quotedPrice <= 0) {
         return res.status(400).json({ message: "Le prix proposé doit être supérieur à zéro" })
@@ -853,164 +880,6 @@ router.patch(
 )
 
 router.patch(
-  "/:id/confirm-payment",
-  authMiddleware,
-  requireVerified,
-  async (req, res) => {
-    try {
-      const request = await ServiceRequest.findById(req.params.id)
-      if (!request) {
-        return res.status(404).json({ message: "Demande non trouvée" })
-      }
-
-      const isTechnician = String(request.technicianId || "") === String(req.user._id || "")
-      const isAdmin = req.user.role === "admin"
-      if (!isTechnician && !isAdmin) {
-        return res.status(403).json({ message: "Accès refusé" })
-      }
-
-      const paymentMethod = String(req.body?.paymentMethod || "").trim()
-      const reference = String(req.body?.reference || "").trim()
-      const amountPaid = Number(req.body?.amountPaid)
-      const expectedAmount = Number(request.appCommissionAmount) || 0
-
-      const allowedPaymentMethods = ["Wave", "Orange Money", "Free Money", "Cash"]
-      if (!allowedPaymentMethods.includes(paymentMethod)) {
-        return res.status(400).json({ message: "Choisissez un mode de paiement valide" })
-      }
-
-      if (!reference || reference.length < 3) {
-        return res.status(400).json({ message: "La reference de paiement est obligatoire" })
-      }
-
-      if (!Number.isFinite(amountPaid) || amountPaid < 0) {
-        return res.status(400).json({ message: "Le montant de contribution est obligatoire" })
-      }
-
-      if (expectedAmount > 0 && amountPaid !== expectedAmount) {
-        return res.status(400).json({ message: `Le montant saisi doit être exactement de ${expectedAmount} FCFA` })
-      }
-
-      request.platformContributionStatus = "paid"
-      request.platformContributionAmountPaid = amountPaid
-      request.platformContributionPaymentMethod = paymentMethod
-      request.platformContributionCollectedAt = new Date()
-      request.platformContributionReference = `${paymentMethod}:${reference}`
-      await request.save()
-
-      return res.json({
-        message: "Contribution enregistrée",
-        request: await serializeServiceRequest(request, req.user.role, req.user._id)
-      })
-    } catch (err) {
-      console.error(err)
-      return res.status(500).json({ message: "Erreur serveur" })
-    }
-  }
-)
-
-router.post(
-  "/:id/online-payment-session",
-  authMiddleware,
-  requireVerified,
-  requireRole(["technician", "server", "admin"]),
-  async (req, res) => {
-    try {
-      const request = await ServiceRequest.findById(req.params.id)
-      if (!request) {
-        return res.status(404).json({ message: "Demande non trouvée" })
-      }
-
-      const isAssignedTechnician = String(request.technicianId || "") === String(req.user._id || "")
-      const isAdmin = req.user.role === "admin"
-      if (!isAssignedTechnician && !isAdmin) {
-        return res.status(403).json({ message: "Accès refusé" })
-      }
-
-      if (request.platformContributionStatus === "paid") {
-        return res.json({
-          message: "La contribution est deja reglee",
-          checkoutUrl: null,
-          sessionId: null,
-          platformContributionStatus: request.platformContributionStatus
-        })
-      }
-
-      const { enabled } = getStripeConfig()
-      if (!enabled) {
-        return res.status(503).json({
-          message: "Le paiement en ligne n'est pas encore configure sur le serveur"
-        })
-      }
-
-      const amount = Number(request.appCommissionAmount) || 0
-      if (!Number.isFinite(amount) || amount <= 0) {
-        return res.status(400).json({ message: "Le montant de contribution est invalide" })
-      }
-
-      const frontendBaseUrl = String(process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/+$/, "")
-      const successUrl = `${frontendBaseUrl}/technician?payment=stripe_success&serviceRequestId=${request._id}`
-      const cancelUrl = `${frontendBaseUrl}/technician?payment=stripe_cancel&serviceRequestId=${request._id}`
-      const serviceLabel = `Contribution YOONBI - ${request.category || "service"}`
-
-      const session = await createCheckoutSession({
-        amount,
-        serviceRequestId: request._id,
-        serviceLabel,
-        customerEmail: req.user.email || "",
-        successUrl,
-        cancelUrl
-      })
-
-      return res.json({
-        message: "Session de paiement creee",
-        checkoutUrl: session.url,
-        sessionId: session.id,
-        platformContributionStatus: request.platformContributionStatus
-      })
-    } catch (err) {
-      console.error(err)
-      return res.status(500).json({ message: err.message || "Impossible de creer la session de paiement" })
-    }
-  }
-)
-
-router.get(
-  "/:id/payment-status",
-  authMiddleware,
-  requireVerified,
-  async (req, res) => {
-    try {
-      const request = await ServiceRequest.findById(req.params.id)
-      if (!request) {
-        return res.status(404).json({ message: "Demande non trouvée" })
-      }
-
-      const isOwner = String(request.clientId || "") === String(req.user._id || "")
-      const isTechnician = String(request.technicianId || "") === String(req.user._id || "")
-      const isAdmin = req.user.role === "admin"
-      if (!isOwner && !isTechnician && !isAdmin) {
-        return res.status(403).json({ message: "Accès refusé" })
-      }
-
-      return res.json({
-        platformContributionStatus: request.platformContributionStatus,
-        platformContributionAmountPaid: request.platformContributionAmountPaid,
-        platformContributionPaymentMethod: request.platformContributionPaymentMethod,
-        platformContributionCollectedAt: request.platformContributionCollectedAt,
-        platformContributionReference: request.platformContributionReference,
-        appCommissionPercent: request.appCommissionPercent,
-        appCommissionAmount: request.appCommissionAmount,
-        providerNetAmount: request.providerNetAmount
-      })
-    } catch (err) {
-      console.error(err)
-      return res.status(500).json({ message: "Erreur serveur" })
-    }
-  }
-)
-
-router.patch(
   "/:id/complete",
   authMiddleware,
   requireVerified,
@@ -1030,15 +899,27 @@ router.patch(
         return res.status(400).json({ message: "La mission doit d'abord être démarree avec le code de sécurité" })
       }
 
-      if (request.platformContributionStatus !== "paid") {
-        return res.status(400).json({ message: "La contribution obligatoire de l'application doit être réglée avant la clôture" })
-      }
-
       const messageParticipants = await Message.distinct("senderId", { serviceId: req.params.id })
       if (messageParticipants.length < 2) {
         return res.status(400).json({
           message: "Une vraie communication client-prestataire est obligatoire avant la clôture de la mission"
         })
+      }
+
+      if (!request.appCommissionDebitedAt) {
+        const provider = await User.findById(request.technicianId)
+        if (provider) {
+          const commissionAmount = Math.max(0, Math.round(Number(request.appCommissionAmount || 0)))
+          provider.commissionCreditBalance = Math.round(Number(provider.commissionCreditBalance || 0)) - commissionAmount
+          provider.commissionCreditUpdatedAt = new Date()
+          await provider.save()
+          request.appCommissionDebitedAt = new Date()
+          request.platformContributionStatus = "paid"
+          request.platformContributionAmountPaid = commissionAmount
+          request.platformContributionPaymentMethod = "commission_credit"
+          request.platformContributionCollectedAt = new Date()
+          request.platformContributionReference = `credit:${request._id}`
+        }
       }
 
       request.status = "completed"
@@ -1181,38 +1062,6 @@ router.post("/:id/messages", authMiddleware, requireVerified, async (req, res) =
 
     const populated = await message.populate("senderId", "name firstName lastName profilePhotoUrl profilePhoto")
     return res.status(201).json(populated)
-  } catch (err) {
-    console.error(err)
-    return res.status(500).json({ message: "Erreur serveur" })
-  }
-})
-
-// Verify platform contribution is paid
-router.post("/:id/verify-contribution", authMiddleware, requireVerified, async (req, res) => {
-  try {
-    const { id } = req.params
-    const request = await ServiceRequest.findById(id)
-    
-    if (!request) {
-      return res.status(404).json({ message: "Service non trouvé" })
-    }
-
-    // Check authorization - client only
-    if (request.clientId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: "Accès non autorisé" })
-    }
-
-    // Read-only verification endpoint: no automatic state mutation.
-    return res.json({
-      success: request.platformContributionStatus === "paid",
-      message:
-        request.platformContributionStatus === "paid"
-          ? "Contribution deja payee"
-          : "Contribution non reglee",
-      status: request.platformContributionStatus,
-      amount: request.appCommissionAmount,
-      amountPaid: request.platformContributionAmountPaid || 0
-    })
   } catch (err) {
     console.error(err)
     return res.status(500).json({ message: "Erreur serveur" })

@@ -131,6 +131,49 @@ const serializeRide = async (ride, { includeSafetyCode = false, viewerUserId = n
   return plainRide
 }
 
+const serializeAvailableRide = (ride) => {
+  const plain = typeof ride?.toObject === "function" ? ride.toObject() : { ...ride }
+  return {
+    _id: plain._id,
+    status: plain.status,
+    driverAvailabilityStatus: plain.driverAvailabilityStatus,
+    pickup: {
+      name: plain.pickup?.name || "Depart",
+      address: plain.pickup?.name || "Zone de depart",
+      lat: plain.pickup?.lat,
+      lng: plain.pickup?.lng
+    },
+    destination: {
+      name: plain.destination?.name || "Destination",
+      address: "Adresse affichee apres acceptation"
+    },
+    price: plain.price,
+    appCommissionPercent: plain.appCommissionPercent,
+    appCommissionAmount: plain.appCommissionAmount,
+    providerNetAmount: plain.providerNetAmount,
+    vehicleType: plain.vehicleType,
+    rideCategory: plain.rideCategory,
+    busZone: plain.busZone,
+    distanceKm: plain.distanceKm,
+    durationMin: plain.durationMin,
+    createdAt: plain.createdAt
+  }
+}
+
+const getProviderCommissionBalance = (user) => Math.round(Number(user?.commissionCreditBalance || 0))
+
+const ensurePositiveCommissionCredit = (user) => {
+  const balance = getProviderCommissionBalance(user)
+  if (balance <= 0) {
+    return {
+      ok: false,
+      balance,
+      message: "Credit commission insuffisant. Rechargez par Wave ou Orange Money au 781488070, puis attendez la validation admin."
+    }
+  }
+  return { ok: true, balance }
+}
+
 const canAccessRide = (ride, user) => {
   if (!ride || !user) return false
   if (user.role === "admin") return true
@@ -266,6 +309,12 @@ router.post("/", authMiddleware, requireVerified, async (req, res) => {
       driverAvailabilityStatus
     })
 
+    socketManager.emitNewRideRequest(
+      ride,
+      { latitude: locationValidation.pickup.lat, longitude: locationValidation.pickup.lng },
+      null
+    )
+
     return res.status(201).json({
       ...(await serializeRide(ride, { includeSafetyCode: true, viewerUserId: req.user._id, viewerRole: req.user.role })),
       safetyCode,
@@ -369,7 +418,7 @@ router.get(
   async (req, res) => {
     try {
       const rides = await Ride.find({ status: "pending" }).sort({ createdAt: -1 })
-      return res.json(await Promise.all(rides.map((ride) => serializeRide(ride, { viewerUserId: req.user._id, viewerRole: req.user.role }))))
+      return res.json(rides.map((ride) => serializeAvailableRide(ride)))
     } catch (err) {
       console.error(err)
       return res.status(500).json({ message: "Erreur serveur" })
@@ -470,6 +519,11 @@ router.patch(
       if (!ride) return res.status(404).json({ message: "Course non trouvée" })
       if (ride.status !== "pending") {
         return res.status(400).json({ message: "Course non disponible" })
+      }
+
+      const creditStatus = ensurePositiveCommissionCredit(req.user)
+      if (!creditStatus.ok) {
+        return res.status(402).json(creditStatus)
       }
 
       if (ride.rideCategory === "bus_student" && !hasRegisteredBusForDriver(req.user)) {
@@ -603,6 +657,18 @@ router.patch(
 
       if (ride.paymentStatus !== "paid") {
         return res.status(400).json({ message: "Le paiement client et la commission doivent être réglés avant la clôture" })
+      }
+
+      if (ride.driverId && !ride.appCommissionDebitedAt) {
+        const driver = await User.findById(ride.driverId)
+        if (driver) {
+          const commissionAmount = Math.max(0, Math.round(Number(ride.appCommissionAmount || 0)))
+          driver.commissionCreditBalance = Math.round(Number(driver.commissionCreditBalance || 0)) - commissionAmount
+          driver.commissionCreditUpdatedAt = new Date()
+          driver.completedRides = Number(driver.completedRides || 0) + 1
+          await driver.save()
+          ride.appCommissionDebitedAt = new Date()
+        }
       }
 
       ride.status = "completed"

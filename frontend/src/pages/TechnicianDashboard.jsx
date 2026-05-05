@@ -71,12 +71,6 @@ const areaCoordinatesByLabel = {
 
 const areaOptions = Object.keys(areaCoordinatesByLabel)
 
-const paymentMethods = [
-  { value: "Wave", label: "Wave" },
-  { value: "Orange Money", label: "Orange Money" },
-  { value: "Free Money", label: "Free Money" },
-  { value: "Cash", label: "Cash" }
-]
 const COMMISSION_PAYMENT_NUMBER = "781488070"
 
 const statusMetaByValue = {
@@ -148,7 +142,7 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
   const [busyRequestId, setBusyRequestId] = useState(null)
   const [settlingRequestId, setSettlingRequestId] = useState(null)
   const [closeFlowById, setCloseFlowById] = useState({})
-  const [paymentDraftById, setPaymentDraftById] = useState({})
+  const [commissionCredit, setCommissionCredit] = useState(null)
   const [safetyDraftById, setSafetyDraftById] = useState({})
   const [quoteDraftById, setQuoteDraftById] = useState({})
   const [locationSaving, setLocationSaving] = useState(false)
@@ -162,6 +156,9 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
 
   const providerFamily = providerFamilyByServiceCategory[user?.providerDetails?.serviceCategory] || "other"
   const providerFamilyLabel = familyLabels[providerFamily] || "Autres services"
+  const commissionCreditBalance = Math.round(Number(commissionCredit?.balance || 0))
+  const hasCommissionCredit = commissionCreditBalance > 0
+  const commissionPaymentNumber = commissionCredit?.paymentNumber || COMMISSION_PAYMENT_NUMBER
   const locationCenter =
     locationDraft.coordinates ||
     (locationDraft.serviceArea && areaCoordinatesByLabel[locationDraft.serviceArea]) ||
@@ -187,43 +184,11 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
     })
   }, [user?.providerDetails?.coordinates, user?.providerDetails?.locationLabel, user?.providerDetails?.serviceArea])
 
-  const updatePaymentDraft = (requestId, field, value) => {
-    setPaymentDraftById((current) => ({
-      ...current,
-      [requestId]: {
-        paymentMethod: "Wave",
-        reference: "",
-        ...(current[requestId] || {}),
-        [field]: value
-      }
-    }))
-  }
-
-  const fillPaymentDraft = (request) => {
-    setPaymentDraftById((current) => ({
-      ...current,
-      [request._id]: {
-        paymentMethod: "Wave",
-        reference: `COMM-${String(request._id || "").slice(-6)}`,
-        ...(current[request._id] || {})
-      }
-    }))
-  }
-
   const toggleCloseFlow = (requestId) => {
     setCloseFlowById((current) => ({
       ...current,
       [requestId]: !current[requestId]
     }))
-  }
-
-  const copyCommissionNumber = async () => {
-    try {
-      await navigator.clipboard.writeText(COMMISSION_PAYMENT_NUMBER)
-      setActionMessage(`Numero de paiement copie: ${COMMISSION_PAYMENT_NUMBER}`)
-    } catch {
-      setActionMessage(`Numero de paiement commission: ${COMMISSION_PAYMENT_NUMBER}`)
-    }
   }
 
   const updateSafetyDraft = (requestId, value) => {
@@ -236,12 +201,12 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
     }))
   }
 
-  const updateQuoteDraft = (requestId, value) => {
+  const updateQuoteDraft = (requestId, field, value) => {
     setQuoteDraftById((current) => ({
       ...current,
       [requestId]: {
         ...(current[requestId] || {}),
-        quotedPrice: value
+        [field]: value
       }
     }))
   }
@@ -276,9 +241,14 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
     try {
       setLoading(true)
       setError(null)
-      const [availRes, mineRes] = await Promise.all([api.get("/services/available"), api.get("/services")])
+      const [availRes, mineRes, creditRes] = await Promise.all([
+        api.get("/services/available"),
+        api.get("/services"),
+        api.get("/payments/commission-credit")
+      ])
       setAvailable(Array.isArray(availRes.data) ? availRes.data : [])
       setMyRequests(Array.isArray(mineRes.data) ? mineRes.data : [])
+      setCommissionCredit(creditRes.data)
     } catch (err) {
       setError(err.response?.data?.message || "Erreur de chargement")
     } finally {
@@ -372,21 +342,6 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
     }
   }
 
-  const completeRequest = async (id) => {
-    try {
-      setBusyRequestId(id)
-      setActionMessage(null)
-      setError(null)
-      await api.patch(`/services/${id}/complete`)
-      setActionMessage("Mission cloturee.")
-      fetchRequests()
-    } catch (err) {
-      setError(err.response?.data?.message || "Impossible de cloturer la mission")
-    } finally {
-      setBusyRequestId(null)
-    }
-  }
-
   const sendServiceSOS = useCallback(
     async (requestId) => {
       if (!requestId) return
@@ -422,39 +377,12 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
         throw new Error("La mission doit etre demarree avant la cloture.")
       }
 
-      if (request.platformContributionStatus !== "paid") {
-        const draft = paymentDraftById[request._id] || {}
-        const paymentMethod = String(draft.paymentMethod || "").trim()
-        const reference = String(draft.reference || "").trim()
-        const expectedAmount = Number(request.appCommissionAmount) || 0
-        const amountPaid = expectedAmount
-
-        const allowedPaymentMethods = ["Wave", "Orange Money", "Free Money", "Cash"]
-        if (!allowedPaymentMethods.includes(paymentMethod)) {
-          throw new Error("Choisissez un mode de paiement valide.")
-        }
-
-        if (!reference || reference.length < 3) {
-          throw new Error("La reference de paiement est obligatoire.")
-        }
-
-        if (!Number.isFinite(expectedAmount) || expectedAmount < 0) {
-          throw new Error("Le montant de contribution est invalide.")
-        }
-
-        await api.patch(`/services/${request._id}/confirm-payment`, {
-          paymentMethod,
-          reference,
-          amountPaid
-        })
-      }
-
       await api.patch(`/services/${request._id}/complete`)
-      setActionMessage("Contribution reglee et mission cloturee.")
+      setActionMessage("Mission cloturee. La commission a ete deduite du credit.")
       setCloseFlowById((current) => ({ ...current, [request._id]: false }))
       fetchRequests()
     } catch (err) {
-      setError(err.response?.data?.message || err.message || "Impossible de regler la contribution et cloturer")
+      setError(err.response?.data?.message || err.message || "Impossible de clôturer la mission")
     } finally {
       setSettlingRequestId(null)
     }
@@ -463,35 +391,6 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
   useEffect(() => {
     fetchRequests()
   }, [])
-
-  useEffect(() => {
-    setPaymentDraftById((current) => {
-      const next = { ...current }
-      let changed = false
-
-      for (const req of myRequests) {
-        const eligible =
-          req &&
-          req._id &&
-          req.platformContributionStatus !== "paid" &&
-          req.status === "in_progress"
-
-        if (!eligible) continue
-
-        const key = req._id
-        const hasExisting = Boolean(current[key]?.reference)
-        if (hasExisting) continue
-
-        next[key] = {
-          paymentMethod: "Wave",
-          reference: `COMM-${String(req._id || "").slice(-6)}`
-        }
-        changed = true
-      }
-
-      return changed ? next : current
-    })
-  }, [myRequests])
 
   const revenue = useMemo(() => {
     const now = new Date()
@@ -665,6 +564,13 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
                 <h2 className="font-['Sora'] text-xl font-bold text-[#16324f]">Mes revenus</h2>
                 <p className="text-sm text-[#5a8fd1]">Vue rapide de vos gains, de la part appliquee et de votre net.</p>
               </div>
+              <div className="mb-4 rounded-[24px] border border-[#e5d6b7] bg-[#fff8ea] p-4">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8b6d2f]">Crédit commission</div>
+                <div className="mt-2 font-['Sora'] text-2xl font-bold text-[#9a7a24]">{commissionCreditBalance.toLocaleString()} F</div>
+                <p className="mt-2 text-sm text-[#6f5a28]">
+                  Recharge par Wave ou Orange Money au {commissionPaymentNumber}. L'admin crédite ce solde après réception.
+                </p>
+              </div>
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-[24px] bg-[linear-gradient(180deg,#edf5fb_0%,#e3eef8_100%)] p-4">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5f7894]">Total brut</div>
@@ -696,6 +602,18 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
                 <h2 className="font-['Sora'] text-xl font-bold text-[#16324f]">{theme.availableTitle}</h2>
                 <p className="text-sm text-[#5a8fd1]">{theme.availableCopy}</p>
               </div>
+              <div className={`mb-4 rounded-[22px] border px-4 py-3 text-sm ${
+                hasCommissionCredit
+                  ? "border-[#bfe5ce] bg-[#eefaf2] text-[#178b55]"
+                  : "border-[#eadfbd] bg-[#fff8ea] text-[#8b6d2f]"
+              }`}>
+                <div className="font-bold">Crédit commission: {commissionCreditBalance.toLocaleString()} F</div>
+                <div className="mt-1">
+                  {hasCommissionCredit
+                    ? "Vous pouvez envoyer des devis. La commission sera déduite du crédit après clôture."
+                    : `Rechargez par Wave ou Orange Money au ${commissionPaymentNumber}, puis attendez la validation admin pour envoyer des devis.`}
+                </div>
+              </div>
 
               {available.length === 0 ? (
                 <div className="rounded-[24px] bg-[#f8fbff] px-5 py-6 text-sm text-[#5a8fd1]">Aucune demande disponible pour le moment.</div>
@@ -717,13 +635,21 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
                             </div>
                           )}
                           <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
-                            <span className="rounded-full bg-[#edf5fb] px-3 py-2 text-[#1260a1]">Contribution appli: {req.appCommissionPercent || 10}% ({(req.appCommissionAmount || 0).toLocaleString()} F)</span>
+                            <span className="rounded-full bg-[#edf5fb] px-3 py-2 text-[#1260a1]">Commission: {req.appCommissionPercent || 10}% apres cloture</span>
                             <span className="rounded-full bg-[#eefaf2] px-3 py-2 text-[#178b55]">Net prestataire: {(req.providerNetAmount || Math.max(0, (req.price || 0) - (req.appCommissionAmount || 0))).toLocaleString()} F</span>
                           </div>
-                          <div className="mt-2 text-xs font-semibold text-[#70839a]">Contribution app: {req.platformContributionStatus || "due"}</div>
+                          <div className="mt-2 text-xs font-semibold text-[#70839a]">
+                            Paiement commission: par crédit prépayé Wave/OM au {commissionPaymentNumber}
+                          </div>
                         </div>
                         <div className="flex flex-col gap-2">
-                          <button onClick={() => quoteRequest(req)} disabled={busyRequestId === req._id} className="rounded-2xl bg-[#18c56e] px-4 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-70">Envoyer devis</button>
+                          <button
+                            onClick={() => quoteRequest(req)}
+                            disabled={busyRequestId === req._id || !hasCommissionCredit}
+                            className="rounded-2xl bg-[#18c56e] px-4 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            {hasCommissionCredit ? "Envoyer devis" : "Crédit requis"}
+                          </button>
                         </div>
                       </div>
                       <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
@@ -748,8 +674,12 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
                             className="w-full rounded-2xl border border-[#dce7f0] bg-white px-4 py-3 text-sm outline-none focus:border-[#1260a1]"
                           />
                         </div>
-                        <button onClick={() => quoteRequest(req)} disabled={busyRequestId === req._id} className="rounded-2xl bg-[linear-gradient(135deg,#1260a1_0%,#0a3760_100%)] px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-70">
-                          {busyRequestId === req._id ? "Envoi..." : "Proposer"}
+                        <button
+                          onClick={() => quoteRequest(req)}
+                          disabled={busyRequestId === req._id || !hasCommissionCredit}
+                          className="rounded-2xl bg-[linear-gradient(135deg,#1260a1_0%,#0a3760_100%)] px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                          {busyRequestId === req._id ? "Envoi..." : hasCommissionCredit ? "Proposer" : "Crédit requis"}
                         </button>
                       </div>
                     </article>
@@ -784,18 +714,17 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
                             )}
                           </div>
                           <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
-                            <span className="rounded-full bg-[#edf5fb] px-3 py-2 text-[#1260a1]">Contribution appli: {req.appCommissionPercent || 10}% ({(req.appCommissionAmount || 0).toLocaleString()} F)</span>
+                            <span className="rounded-full bg-[#edf5fb] px-3 py-2 text-[#1260a1]">Commission credit: {req.appCommissionPercent || 10}% ({(req.appCommissionAmount || 0).toLocaleString()} F)</span>
                             <span className="rounded-full bg-[#eefaf2] px-3 py-2 text-[#178b55]">Net prestataire: {(req.providerNetAmount || Math.max(0, (req.price || 0) - (req.appCommissionAmount || 0))).toLocaleString()} F</span>
                           </div>
-                          <div className="mt-2 text-xs font-semibold text-[#70839a]">Contribution app: {req.platformContributionStatus || "due"}</div>
-                          {req.platformContributionReference && (
-                            <div className="mt-1 text-xs text-[#5a8fd1]">Ref: {req.platformContributionReference}</div>
-                          )}
+                          <div className="mt-2 text-xs font-semibold text-[#70839a]">
+                            Déduction automatique sur crédit commission à la clôture.
+                          </div>
                         </div>
                         <div className="flex flex-col items-end gap-2">
                           <span className="rounded-full bg-[#eefaf2] px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-[#178b55]">{req.status}</span>
                           <span className="rounded-full bg-[#fff7eb] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9a7a24]">
-                            {req.platformContributionStatus === "paid" ? "Paiement ok" : "Paiement requis"}
+                            Crédit commission
                           </span>
                         </div>
                       </div>
@@ -833,74 +762,39 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
                         </div>
                       )}
 
-                      {req.status === "in_progress" && req.platformContributionStatus !== "paid" && !closeFlowById[req._id] && (
+                      {req.status === "in_progress" && !closeFlowById[req._id] && (
                         <div className="mt-4 flex flex-wrap gap-3">
                           <button
                             type="button"
-                            onClick={() => {
-                              fillPaymentDraft(req)
-                              toggleCloseFlow(req._id)
-                            }}
+                            onClick={() => toggleCloseFlow(req._id)}
                             className="rounded-2xl bg-[linear-gradient(135deg,#1260a1_0%,#0a3760_100%)] px-4 py-3 text-sm font-bold text-white"
                           >
                             Cloturer la mission
                           </button>
                           <span className="rounded-2xl bg-[#fff7eb] px-4 py-3 text-xs font-semibold text-[#8b6d2f]">
-                            Contribution a regler avant cloture.
+                            La commission sera deduite du credit commission.
                           </span>
                         </div>
                       )}
 
-                      {req.status === "in_progress" && req.platformContributionStatus !== "paid" && closeFlowById[req._id] && (
+                      {req.status === "in_progress" && closeFlowById[req._id] && (
                         <div className="mt-4 rounded-[22px] bg-[linear-gradient(180deg,#f8fbff_0%,#f3f8fc_100%)] p-4">
                           <div className="mb-3 rounded-2xl border border-[#dce7f0] bg-white px-4 py-3">
-                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5a8fd1]">Paiement contribution</div>
-                            <div className="mt-1 font-['Sora'] text-lg font-bold text-[#16324f]">{COMMISSION_PAYMENT_NUMBER}</div>
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5a8fd1]">Cloture avec credit commission</div>
+                            <div className="mt-1 font-['Sora'] text-lg font-bold text-[#16324f]">{Number(req.appCommissionAmount || 0).toLocaleString()} F</div>
                             <div className="mt-2 text-sm text-[#5f7184]">
-                              Payez d'abord la contribution de <span className="font-semibold">{Number(req.appCommissionAmount || 0).toLocaleString()} F</span> sur ce numero, puis validez ci-dessous.
-                            </div>
-                            <div className="mt-2">
-                              <button
-                                type="button"
-                                onClick={copyCommissionNumber}
-                                className="rounded-xl bg-[#edf5fb] px-3 py-2 text-xs font-bold text-[#1260a1]"
-                              >
-                                Copier le numero
-                              </button>
+                              Ce montant sera deduit automatiquement de votre credit. Recharge Wave/OM: {commissionPaymentNumber}.
                             </div>
                           </div>
-                          <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-                            <div>
-                              <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5a8fd1]">Mode de paiement</label>
-                              <select
-                                value={paymentDraftById[req._id]?.paymentMethod || "Wave"}
-                                onChange={(event) => updatePaymentDraft(req._id, "paymentMethod", event.target.value)}
-                                className="w-full rounded-2xl border border-[#dce7f0] bg-white px-4 py-3 text-sm outline-none focus:border-[#1260a1]"
-                              >
-                                {paymentMethods.map((method) => (
-                                  <option key={method.value} value={method.value}>{method.label}</option>
-                                ))}
-                              </select>
-                            </div>
-                            <div>
-                              <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5a8fd1]">Reference du paiement</label>
-                              <input
-                                value={paymentDraftById[req._id]?.reference || ""}
-                                onChange={(event) => updatePaymentDraft(req._id, "reference", event.target.value)}
-                                placeholder={`REF-${req._id.slice(-6)}`}
-                                className="w-full rounded-2xl border border-[#dce7f0] bg-white px-4 py-3 text-sm outline-none focus:border-[#1260a1]"
-                              />
-                            </div>
+                          <div className="flex flex-wrap gap-3">
                             <button
                               type="button"
                               onClick={() => settleAndCompleteRequest(req)}
                               disabled={settlingRequestId === req._id}
                               className="rounded-2xl bg-[linear-gradient(135deg,#18c56e_0%,#12804a_100%)] px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-70"
                             >
-                              {settlingRequestId === req._id ? "Validation..." : "Valider contribution et cloturer"}
+                              {settlingRequestId === req._id ? "Validation..." : "Confirmer et cloturer"}
                             </button>
-                          </div>
-                          <div className="mt-3">
                             <button
                               type="button"
                               onClick={() => toggleCloseFlow(req._id)}
@@ -909,22 +803,6 @@ const TechnicianDashboard = ({ variant: forcedVariant }) => {
                               Annuler
                             </button>
                           </div>
-                        </div>
-                      )}
-
-                      {req.status === "in_progress" && req.platformContributionStatus === "paid" && (
-                        <div className="mt-4 flex flex-wrap gap-3">
-                          <button
-                            type="button"
-                            onClick={() => completeRequest(req._id)}
-                            disabled={busyRequestId === req._id}
-                            className="rounded-2xl bg-[linear-gradient(135deg,#1260a1_0%,#0a3760_100%)] px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-70"
-                          >
-                            {busyRequestId === req._id ? "Cloture..." : "Cloturer la mission"}
-                          </button>
-                          <span className="rounded-2xl bg-[#eefaf2] px-4 py-3 text-xs font-semibold text-[#178b55]">
-                            Contribution deja enregistree.
-                          </span>
                         </div>
                       )}
                     </article>

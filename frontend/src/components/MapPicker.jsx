@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react"
 import { MapContainer, Marker, Polyline, TileLayer, useMap, useMapEvents } from "react-leaflet"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
+import api from "../api"
 
 delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -37,28 +38,28 @@ const createMapIcon = (iconType, background) =>
 const pickupIcon = createMapIcon("pin", "#165c96")
 const destinationIcon = createMapIcon("flag", "#18c56e")
 const carIcon = createMapIcon("car", "#d7ae49")
+const MAPBOX_TOKEN = String(import.meta.env.VITE_MAPBOX_TOKEN || "").trim()
+const MAPBOX_STYLE = import.meta.env.VITE_MAPBOX_STYLE || "mapbox/navigation-day-v1"
+const mapTileUrl = MAPBOX_TOKEN
+  ? `https://api.mapbox.com/styles/v1/${MAPBOX_STYLE}/tiles/256/{z}/{x}/{y}@2x?access_token=${MAPBOX_TOKEN}`
+  : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+const mapAttribution = MAPBOX_TOKEN
+  ? "&copy; Mapbox &copy; OpenStreetMap"
+  : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 
 const reverseGeocodeLocation = async (lat, lng) => {
   try {
-    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`
-    const response = await fetch(url, {
-      headers: {
-        Accept: "application/json"
-      }
-    })
-    if (!response.ok) {
-      throw new Error(`Reverse geocoding failed with status ${response.status}`)
-    }
-    const data = await response.json()
-    const address = String(data?.display_name || "").trim()
+    const response = await api.get("/maps/reverse-geocode", { params: { lat, lng } })
+    const address = String(response.data?.address || "").trim()
+    const placeName = String(response.data?.name || response.data?.components?.neighborhood || response.data?.components?.city || "").trim()
     return {
-      name: address || `Point GPS ${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`,
-      address: address || ""
+      name: placeName || address || "Lieu sélectionné",
+      address: address || placeName || "Adresse à confirmer"
     }
   } catch {
     return {
-      name: `Point GPS ${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`,
-      address: ""
+      name: "Lieu sélectionné",
+      address: "Adresse à confirmer"
     }
   }
 }
@@ -129,7 +130,7 @@ const MapPicker = ({
   )
 
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-[28px]">
+    <div className="yoonwi-map-shell relative h-full w-full overflow-hidden rounded-[28px]">
       {!readOnly && (
         <div className="absolute left-1/2 top-3 z-[1001] -translate-x-1/2 rounded-full bg-white/92 px-4 py-2 text-[11px] font-semibold text-[#165c96] shadow-lg backdrop-blur">
           {selectionMode === "pickup" ? "Touchez la carte pour choisir le depart" : "Touchez la carte pour choisir la destination"}
@@ -143,8 +144,11 @@ const MapPicker = ({
         style={{ height: "100%", width: "100%" }}
       >
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-          attribution='&copy; OpenStreetMap contributors &copy; CARTO'
+          url={mapTileUrl}
+          attribution={mapAttribution}
+          className="yoonwi-map-tiles"
+          tileSize={256}
+          maxZoom={20}
         />
 
         <ChangeView center={center} pickup={markers.pickup} destination={markers.destination} routeGeometry={routeGeometry} />
@@ -154,7 +158,10 @@ const MapPicker = ({
         )}
 
         {Array.isArray(routeGeometry) && routeGeometry.length > 1 && (
-          <Polyline positions={routeGeometry} pathOptions={{ color: "#165c96", weight: 6, opacity: 0.88 }} />
+          <>
+            <Polyline positions={routeGeometry} pathOptions={{ color: "#ffffff", weight: 12, opacity: 0.92 }} />
+            <Polyline positions={routeGeometry} pathOptions={{ color: "#0868c7", weight: 7, opacity: 0.96, lineCap: "round", lineJoin: "round" }} />
+          </>
         )}
 
         {markers.pickup && <Marker position={[markers.pickup.lat, markers.pickup.lng]} icon={pickupIcon} />}
