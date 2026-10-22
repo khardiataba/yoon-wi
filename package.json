@@ -6,6 +6,6 @@
     "postinstall": "npm --prefix backend install"
   },
   "dependencies": {
-    "axios": "^1.16.0"
+    "axios": "^1.20.0"
   }
 }
